@@ -10,6 +10,7 @@ import '../providers/navigation_provider.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
 import '../../../entries/presentation/widgets/new_entry_bottom_sheet.dart';
+import '../../../parties/presentation/screens/add_party_screen.dart';
 
 class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
@@ -51,11 +52,9 @@ class MainScreen extends ConsumerWidget {
       floatingActionButton: currentIndex == 0
           ? FloatingActionButton(
               onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => const NewEntryBottomSheet(),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddPartyScreen()),
                 );
               },
               backgroundColor: const Color(0xFF8A7311),

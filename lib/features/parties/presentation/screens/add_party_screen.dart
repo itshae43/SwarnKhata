@@ -1,0 +1,516 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class AddPartyScreen extends StatefulWidget {
+  const AddPartyScreen({super.key});
+
+  @override
+  State<AddPartyScreen> createState() => _AddPartyScreenState();
+}
+
+class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  String _balanceType = 'Dr'; // Dr or Cr
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDFBF7),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFDFBF7),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF6B5800)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Add New Party',
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF6B5800),
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Tabs
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2EFE8), // Light cream
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: const Color(0xFFDCA73A), // Gold color from image
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  labelColor: const Color(0xFF4A3E1F),
+                  unselectedLabelColor: const Color(0xFF6B5800).withOpacity(0.7),
+                  labelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+                  unselectedLabelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+                  tabs: const [
+                    Tab(text: 'Customer'),
+                    Tab(text: 'Vendor'),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Form
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTextField(
+                            label: 'Full Name *',
+                            hint: 'e.g. Ramesh Jewellers',
+                            prefixIcon: Icons.person_outline,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildPhoneField(),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            label: 'Business Name (Optional)',
+                            hint: 'Trading name',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            label: 'GSTIN (Optional)',
+                            hint: '15-DIGIT ALPHANUMERIC',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            label: 'Address',
+                            hint: 'Complete billing/shipping address',
+                            maxLines: 3,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Opening Balance Section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Opening Balance',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF333333),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Initialize ledger accounts for this party.',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                            border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                          ),
+                          child: Column(
+                            children: [
+                              // Cash Balance Row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Cash Balance (INR)',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  Text(
+                                    'Dr / Cr',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF8A7311),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFE0D8C3)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 12.0),
+                                            child: Text(
+                                              '₹',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: TextField(
+                                              keyboardType: TextInputType.number,
+                                              decoration: InputDecoration(
+                                                border: InputBorder.none,
+                                                hintText: '0.00',
+                                                hintStyle: GoogleFonts.montserrat(color: Colors.grey[400]),
+                                                contentPadding: const EdgeInsets.only(bottom: 4),
+                                              ),
+                                              style: GoogleFonts.montserrat(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          Container(
+                                            margin: const EdgeInsets.all(4),
+                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF2EFE8),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: DropdownButtonHideUnderline(
+                                              child: DropdownButton<String>(
+                                                value: _balanceType,
+                                                icon: const Icon(Icons.keyboard_arrow_down, size: 20, color: Color(0xFF6B5800)),
+                                                items: <String>['Dr', 'Cr'].map((String value) {
+                                                  return DropdownMenuItem<String>(
+                                                    value: value,
+                                                    child: Text(
+                                                      value,
+                                                      style: GoogleFonts.montserrat(
+                                                        fontWeight: FontWeight.bold,
+                                                        color: const Color(0xFF4A3E1F),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                                onChanged: (String? newValue) {
+                                                  if (newValue != null) {
+                                                    setState(() {
+                                                      _balanceType = newValue;
+                                                    });
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              // Gold and Silver Row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Fine Gold (g)',
+                                          style: GoogleFonts.montserrat(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.grey[800],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: const Color(0xFFE0D8C3)),
+                                          ),
+                                          child: TextField(
+                                            keyboardType: TextInputType.number,
+                                            textAlign: TextAlign.center,
+                                            decoration: InputDecoration(
+                                              border: InputBorder.none,
+                                              hintText: '0.000',
+                                              hintStyle: GoogleFonts.montserrat(color: Colors.grey[400]),
+                                            ),
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Fine Silver (g)',
+                                          style: GoogleFonts.montserrat(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.grey[800],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: const Color(0xFFE0D8C3)),
+                                          ),
+                                          child: TextField(
+                                            keyboardType: TextInputType.number,
+                                            textAlign: TextAlign.center,
+                                            decoration: InputDecoration(
+                                              border: InputBorder.none,
+                                              hintText: '0.000',
+                                              hintStyle: GoogleFonts.montserrat(color: Colors.grey[400]),
+                                            ),
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Save Button
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              color: const Color(0xFFFDFBF7),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF755E0B), // Dark gold color
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.save, color: Colors.white, size: 20),
+                  label: Text(
+                    'Save Party',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required String hint,
+    IconData? prefixIcon,
+    int maxLines = 1,
+  }) {
+    List<TextSpan> labelSpans = [];
+    if (label.contains('*')) {
+      final parts = label.split('*');
+      labelSpans.add(TextSpan(text: parts[0]));
+      labelSpans.add(const TextSpan(text: '*', style: TextStyle(color: Colors.red)));
+    } else if (label.contains('(Optional)')) {
+      final parts = label.split('(Optional)');
+      labelSpans.add(TextSpan(text: parts[0]));
+      labelSpans.add(TextSpan(text: '(Optional)', style: GoogleFonts.montserrat(color: Colors.grey[500], fontWeight: FontWeight.w600)));
+    } else {
+      labelSpans.add(TextSpan(text: label));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey[800],
+            ),
+            children: labelSpans,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE0D8C3)),
+          ),
+          child: TextField(
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.montserrat(color: Colors.grey[400]),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              prefixIcon: prefixIcon != null
+                  ? Icon(prefixIcon, color: Colors.grey[400])
+                  : null,
+            ),
+            style: GoogleFonts.montserrat(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey[800],
+            ),
+            children: const [
+              TextSpan(text: 'Phone Number '),
+              TextSpan(text: '*', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE0D8C3)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF2EFE8),
+                  borderRadius: BorderRadius.horizontal(left: Radius.circular(8)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '+91',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ),
+              Container(
+                width: 1,
+                color: const Color(0xFFE0D8C3),
+              ),
+              Expanded(
+                child: TextField(
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    hintText: '10-digit number',
+                    hintStyle: GoogleFonts.montserrat(color: Colors.grey[400]),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  style: GoogleFonts.montserrat(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
