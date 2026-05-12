@@ -1,8 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // --- MOCK DATA ---
+  // In the future, this data will be dynamic (fetched from an API or State Management).
+  
+  // Profile Data
+  final String userName = 'Shailendra Singh';
+  final String userAvatarUrl = 'https://i.pravatar.cc/150?u=shailendra';
+
+  // Balances Data
+  final String totalCash = '₹12,45,000';
+  final String onlineBalance = '₹5,30,000';
+  final String goldBalance = '450.25g';
+  final String diamondBalance = '12.4 ct';
+
+  // Today's Summary Data
+  final String todayIn = '+₹45,000';
+  final String todayOut = '-₹12,000';
+
+  // Recent Transactions List
+  final List<Map<String, dynamic>> recentTransactions = [
+    {
+      'icon': Icons.storefront_outlined,
+      'iconBgColor': const Color(0xFFE8C73D),
+      'iconColor': const Color(0xFF4A3E1F),
+      'title': 'Gaurav Jewellers',
+      'subtitle': 'Metal Deposit • 10:30 AM',
+      'amount': '+ 50g Gold',
+      'amountColor': const Color(0xFF8A7311),
+      'lineColor': const Color(0xFF8A7311),
+    },
+    {
+      'icon': Icons.point_of_sale_outlined,
+      'iconBgColor': const Color(0xFFEBEBEB),
+      'iconColor': const Color(0xFF555555),
+      'title': 'Cash Sale',
+      'subtitle': 'Retail • 09:15 AM',
+      'amount': '+ ₹15,000',
+      'amountColor': const Color(0xFF8A7311),
+      'lineColor': const Color(0xFF8A7311),
+    },
+    {
+      'icon': Icons.local_shipping_outlined,
+      'iconBgColor': const Color(0xFFEBEBEB),
+      'iconColor': const Color(0xFF555555),
+      'title': 'Supplier Payment',
+      'subtitle': 'Bank Transfer • Yesterday',
+      'amount': '- ₹2,000',
+      'amountColor': const Color(0xFFC62828),
+      'lineColor': const Color(0xFFC62828),
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -42,16 +98,16 @@ class HomeScreen extends StatelessWidget {
               width: 1.5,
             ),
           ),
-          child: const CircleAvatar(
+          child: CircleAvatar(
             radius: 20,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=shailendra'),
+            backgroundImage: NetworkImage(userAvatarUrl), // Used dynamic variable
           ),
         ),
         const SizedBox(width: 12),
         // Name
         Expanded(
           child: Text(
-            'Shailendra Singh',
+            userName, // Used dynamic variable
             style: GoogleFonts.montserrat(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -82,10 +138,10 @@ class HomeScreen extends StatelessWidget {
       crossAxisSpacing: 12,
       childAspectRatio: 1.4,
       children: [
-        _buildGridCard('Total Cash', '₹12,45,000', Icons.account_balance_wallet_outlined, const Color(0xFFF9F6ED), const Color(0xFFB08900)),
-        _buildGridCard('Online Balance', '₹5,30,000', Icons.account_balance_outlined, const Color(0xFFF9F6ED), const Color(0xFFB08900)),
-        _buildGridCard('Gold Balance', '450.25g', Icons.widgets_outlined, const Color(0xFFE8C73D), const Color(0xFF4A3E1F)),
-        _buildGridCard('Diamond Balance', '12.4 ct', Icons.diamond_outlined, const Color(0xFFE3EDF7), const Color(0xFF5B81A8)),
+        _buildGridCard('Total Cash', totalCash, Icons.account_balance_wallet_outlined, const Color(0xFFF9F6ED), const Color(0xFFB08900)),
+        _buildGridCard('Online Balance', onlineBalance, Icons.account_balance_outlined, const Color(0xFFF9F6ED), const Color(0xFFB08900)),
+        _buildGridCard('Gold Balance', goldBalance, Icons.widgets_outlined, const Color(0xFFE8C73D), const Color(0xFF4A3E1F)),
+        _buildGridCard('Diamond Balance', diamondBalance, Icons.diamond_outlined, const Color(0xFFE3EDF7), const Color(0xFF5B81A8)),
       ],
     );
   }
@@ -204,7 +260,7 @@ class HomeScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text("+₹45,000", style: GoogleFonts.montserrat(fontSize: 22, color: const Color(0xFF8A7311), fontWeight: FontWeight.bold)),
+                            Text(todayIn, style: GoogleFonts.montserrat(fontSize: 22, color: const Color(0xFF8A7311), fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ],
@@ -245,7 +301,7 @@ class HomeScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text("-₹12,000", style: GoogleFonts.montserrat(fontSize: 22, color: const Color(0xFFC62828), fontWeight: FontWeight.bold)),
+                            Text(todayOut, style: GoogleFonts.montserrat(fontSize: 22, color: const Color(0xFFC62828), fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ],
@@ -299,42 +355,28 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           child: Column(
-            children: [
-              _buildTransactionItem(
-                icon: Icons.storefront_outlined,
-                iconBgColor: const Color(0xFFE8C73D),
-                iconColor: const Color(0xFF4A3E1F),
-                title: "Gaurav Jewellers",
-                subtitle: "Metal Deposit • 10:30 AM",
-                amount: "+ 50g Gold",
-                amountColor: const Color(0xFF8A7311),
-                lineColor: const Color(0xFF8A7311),
-                isFirst: true,
-              ),
-              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
-              _buildTransactionItem(
-                icon: Icons.point_of_sale_outlined,
-                iconBgColor: const Color(0xFFEBEBEB),
-                iconColor: const Color(0xFF555555),
-                title: "Cash Sale",
-                subtitle: "Retail • 09:15 AM",
-                amount: "+ ₹15,000",
-                amountColor: const Color(0xFF8A7311),
-                lineColor: const Color(0xFF8A7311),
-              ),
-              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
-              _buildTransactionItem(
-                icon: Icons.local_shipping_outlined,
-                iconBgColor: const Color(0xFFEBEBEB),
-                iconColor: const Color(0xFF555555),
-                title: "Supplier Payment",
-                subtitle: "Bank Transfer • Yesterday",
-                amount: "- ₹2,000",
-                amountColor: const Color(0xFFC62828),
-                lineColor: const Color(0xFFC62828),
-                isLast: true,
-              ),
-            ],
+            // Generating transactions dynamically from the list
+            children: List.generate(recentTransactions.length, (index) {
+              final tx = recentTransactions[index];
+              return Column(
+                children: [
+                  _buildTransactionItem(
+                    icon: tx['icon'] as IconData,
+                    iconBgColor: tx['iconBgColor'] as Color,
+                    iconColor: tx['iconColor'] as Color,
+                    title: tx['title'] as String,
+                    subtitle: tx['subtitle'] as String,
+                    amount: tx['amount'] as String,
+                    amountColor: tx['amountColor'] as Color,
+                    lineColor: tx['lineColor'] as Color,
+                    isFirst: index == 0,
+                    isLast: index == recentTransactions.length - 1,
+                  ),
+                  if (index != recentTransactions.length - 1)
+                    Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
+                ],
+              );
+            }),
           ),
         ),
       ],
@@ -423,3 +465,4 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
