@@ -9,6 +9,8 @@ import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
+import '../../entries/presentation/widgets/new_entry_bottom_sheet.dart';
+
 class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
 
@@ -35,6 +37,21 @@ class MainScreen extends ConsumerWidget {
         },
         child: screens[currentIndex],
       ),
+      floatingActionButton: currentIndex == 0
+          ? FloatingActionButton(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => const NewEntryBottomSheet(),
+                );
+              },
+              backgroundColor: const Color(0xFF8A7311),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.add, color: Colors.white, size: 32),
+            )
+          : null,
       bottomNavigationBar: const CustomBottomNavBar(),
     );
   }
