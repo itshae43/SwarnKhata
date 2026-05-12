@@ -66,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
       color: const Color(0xFFFDFBF7), // Light cream background matching the image
       child: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
