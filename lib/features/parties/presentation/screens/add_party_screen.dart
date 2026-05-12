@@ -310,7 +310,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Fine Silver (g)',
+                                          'Diamond (ct)',
                                           style: GoogleFonts.montserrat(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
