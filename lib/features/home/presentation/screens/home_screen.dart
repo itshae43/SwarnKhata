@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -25,19 +26,19 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   child: const CircleAvatar(
-                    radius: 28,
+                    radius: 20,
                     backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=shailendra'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 // Name
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Shailendra Singh',
-                    style: TextStyle(
-                      fontSize: 28,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF6B5800), // Slightly darker gold/brown
+                      color: const Color(0xFF6B5800), // Slightly darker gold/brown
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -55,15 +56,6 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             // Other content can go here
-            const Center(
-              child: Text(
-                'Welcome Back',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
           ],
         ),
       ),
