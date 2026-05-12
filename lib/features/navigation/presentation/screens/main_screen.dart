@@ -27,6 +27,15 @@ class MainScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
+      appBar: AppBar(
+        title: Image.asset(
+          'assets/images/logo.png',
+          height: 32,
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
