@@ -17,6 +17,7 @@ class SwarnKhataApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFFFF8F0),
       ),
       home: const MainScreen(),
     );

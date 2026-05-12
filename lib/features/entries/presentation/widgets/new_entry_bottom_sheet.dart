@@ -18,7 +18,7 @@ class _NewEntryBottomSheetState extends State<NewEntryBottomSheet> {
     
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFFAF4E6), // Light cream background
+        color: Color(0xFFFFF8F0),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
@@ -181,7 +181,7 @@ class _NewEntryBottomSheetState extends State<NewEntryBottomSheet> {
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF0EBE0),
+                color: const Color(0xFFFFF8F0),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -205,7 +205,7 @@ class _NewEntryBottomSheetState extends State<NewEntryBottomSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFE8DA),
+                    color: const Color(0xFFFFF8F0),
                     borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
@@ -278,7 +278,7 @@ class _NewEntryBottomSheetState extends State<NewEntryBottomSheet> {
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFFEFE8DA),
+                      backgroundColor: const Color(0xFFFFF8F0),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
