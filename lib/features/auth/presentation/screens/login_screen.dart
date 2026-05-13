@@ -88,77 +88,82 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           opacity: _fadeAnim,
           child: SlideTransition(
             position: _slideAnim,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 20),
-                    // ─── LOGO ─────────────────────────────────────
-                    _buildLogo(),
-                    const SizedBox(height: 32),
-                    // ─── TITLE ────────────────────────────────────
-                    Text(
-                      "Let's Get Started!",
-                      style: GoogleFonts.montserrat(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E1E1E),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in to your SwarnKhata account',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 36),
-                    // ─── EMAIL FIELD ──────────────────────────────
-                    _buildEmailField(),
-                    const SizedBox(height: 16),
-                    // ─── PASSWORD FIELD ───────────────────────────
-                    _buildPasswordField(),
-                    const SizedBox(height: 12),
-                    // ─── FORGOT PASSWORD ──────────────────────────
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ForgotPasswordScreen(),
-                          ),
-                        ),
-                        child: Text(
-                          'Forgot Password?',
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 20),
+                        // ─── LOGO ─────────────────────────────────────
+                        _buildLogo(),
+                        const SizedBox(height: 32),
+                        // ─── TITLE ────────────────────────────────────
+                        Text(
+                          "Let's Get Started!",
                           style: GoogleFonts.montserrat(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF8A7311),
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1E1E1E),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Sign in to your SwarnKhata account',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 36),
+                        // ─── EMAIL FIELD ──────────────────────────────
+                        _buildEmailField(),
+                        const SizedBox(height: 16),
+                        // ─── PASSWORD FIELD ───────────────────────────
+                        _buildPasswordField(),
+                        const SizedBox(height: 12),
+                        // ─── FORGOT PASSWORD ──────────────────────────
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            ),
+                            child: Text(
+                              'Forgot Password?',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF8A7311),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        // ─── SIGN IN BUTTON ───────────────────────────
+                        _buildSignInButton(authState),
+                        const SizedBox(height: 24),
+                        // ─── DIVIDER ──────────────────────────────────
+                        _buildDivider(),
+                        const SizedBox(height: 20),
+                        // ─── GOOGLE BUTTON ────────────────────────────
+                        _buildGoogleButton(authState),
+                        const SizedBox(height: 20),
+                        // ─── PHONE OTP BUTTON ─────────────────────────
+                        _buildPhoneButton(),
+                        const SizedBox(height: 32),
+                        // ─── SIGN UP LINK ─────────────────────────────
+                        _buildSignUpLink(),
+                      ],
                     ),
-                    const SizedBox(height: 28),
-                    // ─── SIGN IN BUTTON ───────────────────────────
-                    _buildSignInButton(authState),
-                    const SizedBox(height: 24),
-                    // ─── DIVIDER ──────────────────────────────────
-                    _buildDivider(),
-                    const SizedBox(height: 20),
-                    // ─── GOOGLE BUTTON ────────────────────────────
-                    _buildGoogleButton(authState),
-                    const SizedBox(height: 20),
-                    // ─── PHONE OTP BUTTON ─────────────────────────
-                    _buildPhoneButton(),
-                    const SizedBox(height: 32),
-                    // ─── SIGN UP LINK ─────────────────────────────
-                    _buildSignUpLink(),
-                  ],
+                  ),
                 ),
               ),
             ),

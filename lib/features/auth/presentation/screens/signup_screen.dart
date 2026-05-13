@@ -98,126 +98,131 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
           opacity: _fadeAnim,
           child: SlideTransition(
             position: _slideAnim,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 12),
-                    // ─── LOGO ─────────────────────────────────────
-                    _buildLogo(),
-                    const SizedBox(height: 24),
-                    // ─── TITLE ────────────────────────────────────
-                    Text(
-                      'Create Account',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E1E1E),
-                      ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 12),
+                        // ─── LOGO ─────────────────────────────────────
+                        _buildLogo(),
+                        const SizedBox(height: 24),
+                        // ─── TITLE ────────────────────────────────────
+                        Text(
+                          'Create Account',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1E1E1E),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Join the premium ledger for your business',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 28),
+                        // ─── FIELDS ───────────────────────────────────
+                        _buildField(
+                          controller: _fullNameController,
+                          label: 'Full Name',
+                          hint: 'John Doe',
+                          icon: Icons.person_outline_rounded,
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? 'Full name is required'
+                              : null,
+                        ),
+                        const SizedBox(height: 14),
+                        _buildField(
+                          controller: _businessNameController,
+                          label: 'Business Name',
+                          hint: 'Aura Jewelers',
+                          icon: Icons.store_outlined,
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? 'Business name is required'
+                              : null,
+                        ),
+                        const SizedBox(height: 14),
+                        _buildField(
+                          controller: _emailController,
+                          label: 'Email',
+                          hint: 'john@aurajewelers.com',
+                          icon: Icons.mail_outline_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Email is required';
+                            if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}')
+                                .hasMatch(v)) {
+                              return 'Enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        _buildField(
+                          controller: _phoneController,
+                          label: 'Phone Number',
+                          hint: '+91 9876543210',
+                          icon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? 'Phone number is required'
+                              : null,
+                        ),
+                        const SizedBox(height: 14),
+                        _buildPasswordField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          obscure: _obscurePassword,
+                          onToggle: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Password is required';
+                            if (v.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        _buildPasswordField(
+                          controller: _confirmPasswordController,
+                          label: 'Confirm Password',
+                          obscure: _obscureConfirm,
+                          onToggle: () =>
+                              setState(() => _obscureConfirm = !_obscureConfirm),
+                          validator: (v) {
+                            if (v != _passwordController.text) {
+                              return 'Passwords do not match';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 28),
+                        // ─── CREATE ACCOUNT BUTTON ────────────────────────
+                        _buildCreateButton(authState),
+                        const SizedBox(height: 22),
+                        // ─── DIVIDER ──────────────────────────────────
+                        _buildDivider(),
+                        const SizedBox(height: 18),
+                        // ─── GOOGLE BUTTON ────────────────────────────
+                        _buildGoogleButton(authState),
+                        const SizedBox(height: 28),
+                        // ─── SIGN IN LINK ─────────────────────────────
+                        _buildSignInLink(),
+                        const SizedBox(height: 16),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Join the premium ledger for your business',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 28),
-                    // ─── FIELDS ───────────────────────────────────
-                    _buildField(
-                      controller: _fullNameController,
-                      label: 'Full Name',
-                      hint: 'John Doe',
-                      icon: Icons.person_outline_rounded,
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Full name is required'
-                          : null,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildField(
-                      controller: _businessNameController,
-                      label: 'Business Name',
-                      hint: 'Aura Jewelers',
-                      icon: Icons.store_outlined,
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Business name is required'
-                          : null,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildField(
-                      controller: _emailController,
-                      label: 'Email',
-                      hint: 'john@aurajewelers.com',
-                      icon: Icons.mail_outline_rounded,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Email is required';
-                        if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$')
-                            .hasMatch(v)) {
-                          return 'Enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    _buildField(
-                      controller: _phoneController,
-                      label: 'Phone Number',
-                      hint: '+91 9876543210',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Phone number is required'
-                          : null,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildPasswordField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      obscure: _obscurePassword,
-                      onToggle: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Password is required';
-                        if (v.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    _buildPasswordField(
-                      controller: _confirmPasswordController,
-                      label: 'Confirm Password',
-                      obscure: _obscureConfirm,
-                      onToggle: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
-                      validator: (v) {
-                        if (v != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 28),
-                    // ─── CREATE ACCOUNT BUTTON ────────────────────
-                    _buildCreateButton(authState),
-                    const SizedBox(height: 22),
-                    // ─── DIVIDER ──────────────────────────────────
-                    _buildDivider(),
-                    const SizedBox(height: 18),
-                    // ─── GOOGLE BUTTON ────────────────────────────
-                    _buildGoogleButton(authState),
-                    const SizedBox(height: 28),
-                    // ─── SIGN IN LINK ─────────────────────────────
-                    _buildSignInLink(),
-                    const SizedBox(height: 16),
-                  ],
+                  ),
                 ),
               ),
             ),
