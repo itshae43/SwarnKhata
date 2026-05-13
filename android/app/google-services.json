@@ -12,7 +12,12 @@
           "package_name": "com.example.swarn_khata"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "784678166990-3031qc169mr7tt7an7sldtv654vdbc8o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBpI5tMDu23-D0ZEf5eZIzgEdVFaPXxcJA"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "784678166990-3031qc169mr7tt7an7sldtv654vdbc8o.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "784678166990-nqcporvssprt3r6kju8rmfog4vegijv5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.swarnKhata"
+              }
+            }
+          ]
         }
       }
     }

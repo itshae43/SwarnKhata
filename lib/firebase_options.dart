@@ -40,51 +40,50 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // NOTE: These are placeholder values to allow the app to compile.
-  // You MUST run `flutterfire configure --project=swarnkhata` to replace these 
-  // with your actual Firebase project credentials!
-
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyPlaceholderWebApiKeyForCompilationOnly',
-    appId: '1:784678166990:web:placeholder1234567890',
+    apiKey: 'AIzaSyBr_M1nkGG6G-e5DIQX5ABNVmxA2v3GAzE',
+    appId: '1:784678166990:web:1f5b3224c67f791bbbcb9f',
     messagingSenderId: '784678166990',
     projectId: 'swarnkhata',
     authDomain: 'swarnkhata.firebaseapp.com',
-    storageBucket: 'swarnkhata.appspot.com',
+    storageBucket: 'swarnkhata.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyPlaceholderAndroidApiKeyForCompile',
-    appId: '1:784678166990:android:placeholder1234567',
+    apiKey: 'AIzaSyBpI5tMDu23-D0ZEf5eZIzgEdVFaPXxcJA',
+    appId: '1:784678166990:android:3cd97122f5da681fbbcb9f',
     messagingSenderId: '784678166990',
     projectId: 'swarnkhata',
-    storageBucket: 'swarnkhata.appspot.com',
+    storageBucket: 'swarnkhata.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyPlaceholderIosApiKeyForCompile12',
-    appId: '1:784678166990:ios:placeholder1234567890a',
+    apiKey: 'AIzaSyDrd9YwfEZrYXWmSCH24W8cWZH-Pnp5XP8',
+    appId: '1:784678166990:ios:0f45b7549ee07304bbcb9f',
     messagingSenderId: '784678166990',
     projectId: 'swarnkhata',
-    storageBucket: 'swarnkhata.appspot.com',
-    iosBundleId: 'com.example.swarnkhata',
+    storageBucket: 'swarnkhata.firebasestorage.app',
+    iosClientId: '784678166990-nqcporvssprt3r6kju8rmfog4vegijv5.apps.googleusercontent.com',
+    iosBundleId: 'com.example.swarnKhata',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyPlaceholderMacApiKeyForCompile12',
-    appId: '1:784678166990:ios:placeholder1234567890b',
+    apiKey: 'AIzaSyDrd9YwfEZrYXWmSCH24W8cWZH-Pnp5XP8',
+    appId: '1:784678166990:ios:0f45b7549ee07304bbcb9f',
     messagingSenderId: '784678166990',
     projectId: 'swarnkhata',
-    storageBucket: 'swarnkhata.appspot.com',
-    iosBundleId: 'com.example.swarnkhata',
+    storageBucket: 'swarnkhata.firebasestorage.app',
+    iosClientId: '784678166990-nqcporvssprt3r6kju8rmfog4vegijv5.apps.googleusercontent.com',
+    iosBundleId: 'com.example.swarnKhata',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyPlaceholderWindowsApiKeyForCompile',
-    appId: '1:784678166990:web:placeholder1234567890c',
+    apiKey: 'AIzaSyBr_M1nkGG6G-e5DIQX5ABNVmxA2v3GAzE',
+    appId: '1:784678166990:web:9a52a449166b0929bbcb9f',
     messagingSenderId: '784678166990',
     projectId: 'swarnkhata',
     authDomain: 'swarnkhata.firebaseapp.com',
-    storageBucket: 'swarnkhata.appspot.com',
+    storageBucket: 'swarnkhata.firebasestorage.app',
   );
+
 }
