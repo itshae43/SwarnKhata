@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../navigation/presentation/screens/main_screen.dart';
+import '../../data/auth_repository.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
+class _LoginScreenState extends ConsumerState<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -50,18 +53,38 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  void _handleSignIn() {
+  Future<void> _handleSignIn() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
-    // TODO: Replace with Firebase Auth sign-in logic
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.signInWithEmailPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      
       if (!mounted) return;
-      setState(() => _isLoading = false);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
-    });
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Authentication failed')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _handleGoogleSignIn() {
@@ -438,14 +461,14 @@ class _LoginScreenState extends State<LoginScreen>
 //  SIGN UP SCREEN
 // ═══════════════════════════════════════════════════════════════════
 
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen>
+class _SignUpScreenState extends ConsumerState<SignUpScreen>
     with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _businessNameController = TextEditingController();
@@ -491,15 +514,41 @@ class _SignUpScreenState extends State<SignUpScreen>
     super.dispose();
   }
 
-  void _handleSignUp() {
+  Future<void> _handleSignUp() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
-    // TODO: Replace with Firebase Auth create user logic
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.signUpWithEmailPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      
+      // Usually, you might also want to save the user's name and business name
+      // to Firestore here. For now, we'll just create the auth user.
+      
       if (!mounted) return;
-      setState(() => _isLoading = false);
       Navigator.pop(context); // Back to login after sign up
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully! Please sign in.')),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Sign up failed')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _handleGoogleSignUp() {
