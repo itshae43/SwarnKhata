@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'features/navigation/presentation/screens/main_screen.dart';
+import 'features/auth/presentation/screens/login_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: SwarnKhataApp()));
@@ -19,7 +19,7 @@ class SwarnKhataApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFFFF8F0),
       ),
-      home: const MainScreen(),
+      home: const LoginScreen(),
     );
   }
 }

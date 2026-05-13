@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "784678166990",
+    "project_id": "swarnkhata",
+    "storage_bucket": "swarnkhata.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:784678166990:android:3cd97122f5da681fbbcb9f",
+        "android_client_info": {
+          "package_name": "com.example.swarn_khata"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpI5tMDu23-D0ZEf5eZIzgEdVFaPXxcJA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
