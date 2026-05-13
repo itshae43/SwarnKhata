@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swarn_khata/core/models/user_model.dart';
+import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   // --- MOCK DATA ---
-  // In the future, this data will be dynamic (fetched from an API or State Management).
-  
-  // Profile Data
-  final String userName = 'Shailendra Singh';
-  final String userAvatarUrl = 'https://i.pravatar.cc/150?u=shailendra';
+  // Balances will be fetched from Firestore in future iterations
 
   // Balances Data
   final String totalCash = '₹12,45,000';
@@ -87,9 +86,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProfileHeader() {
+    final userAsync = ref.watch(currentUserProvider);
+    final userName = userAsync.when(
+      data: (UserModel? u) => u?.fullName ?? 'Welcome',
+      loading: () => 'Loading...',
+      error: (_, __) => 'Welcome',
+    );
+    final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+
     return Row(
       children: [
-        // Profile Image with Gold Border
+        // Avatar with initial
         Container(
           padding: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
@@ -101,18 +108,26 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: CircleAvatar(
             radius: 20,
-            backgroundImage: NetworkImage(userAvatarUrl), // Used dynamic variable
+            backgroundColor: const Color(0xFFD4B13B),
+            child: Text(
+              initial,
+              style: GoogleFonts.montserrat(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 12),
         // Name
         Expanded(
           child: Text(
-            userName, // Used dynamic variable
+            userName,
             style: GoogleFonts.montserrat(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF6B5800), // Darker gold/brown
+              color: const Color(0xFF6B5800),
               letterSpacing: -0.5,
             ),
           ),

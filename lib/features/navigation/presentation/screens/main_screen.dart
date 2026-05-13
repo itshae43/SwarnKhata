@@ -9,7 +9,6 @@ import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
-import '../../../entries/presentation/widgets/new_entry_bottom_sheet.dart';
 import '../../../parties/presentation/screens/add_party_screen.dart';
 
 class MainScreen extends ConsumerWidget {
