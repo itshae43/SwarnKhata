@@ -10,7 +10,7 @@ class LedgerScreen extends StatefulWidget {
 
 class _LedgerScreenState extends State<LedgerScreen> {
   String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Cash', 'Gold', 'Silver'];
+  final List<String> _filters = ['All', 'Cash', 'Gold', 'Diamond'];
 
   final List<Map<String, dynamic>> _recentActivity = [
     {
@@ -247,19 +247,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Recent Activity",
+          "All Activity",
           style: GoogleFonts.montserrat(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
-          ),
-        ),
-        Text(
-          "View All",
-          style: GoogleFonts.montserrat(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF6B5800),
           ),
         ),
       ],

@@ -28,7 +28,7 @@ class MainScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      appBar: (currentIndex != 0 && currentIndex != 1)
+      appBar: currentIndex == 4
           ? AppBar(
               title: Image.asset(
                 'assets/images/logo.png',
