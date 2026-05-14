@@ -48,7 +48,7 @@ class MainScreen extends ConsumerWidget {
         },
         child: screens[currentIndex],
       ),
-      floatingActionButton: currentIndex == 0
+      floatingActionButton: (currentIndex == 0 || currentIndex == 3)
           ? FloatingActionButton(
               onPressed: () {
                 Navigator.push(

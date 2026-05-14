@@ -1,18 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../providers/party_providers.dart';
 
-class AddPartyScreen extends StatefulWidget {
+class AddPartyScreen extends ConsumerStatefulWidget {
   const AddPartyScreen({super.key});
 
   @override
-  State<AddPartyScreen> createState() => _AddPartyScreenState();
+  ConsumerState<AddPartyScreen> createState() => _AddPartyScreenState();
 }
 
-class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProviderStateMixin {
+class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _cashBalanceType = 'Dr';
   String _goldBalanceType = 'Dr';
   String _diamondBalanceType = 'Dr';
+
+  // Controllers
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _businessNameController = TextEditingController();
+  final _gstinController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cashBalanceController = TextEditingController();
+  final _goldBalanceController = TextEditingController();
+  final _diamondBalanceController = TextEditingController();
 
   @override
   void initState() {
@@ -23,6 +35,14 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
   @override
   void dispose() {
     _tabController.dispose();
+    _nameController.dispose();
+    _phoneController.dispose();
+    _businessNameController.dispose();
+    _gstinController.dispose();
+    _addressController.dispose();
+    _cashBalanceController.dispose();
+    _goldBalanceController.dispose();
+    _diamondBalanceController.dispose();
     super.dispose();
   }
 
@@ -107,24 +127,28 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
                             label: 'Full Name *',
                             hint: 'e.g. Ramesh Jewellers',
                             prefixIcon: Icons.person_outline,
+                            controller: _nameController,
                           ),
                           const SizedBox(height: 16),
-                          _buildPhoneField(),
+                          _buildPhoneField(controller: _phoneController),
                           const SizedBox(height: 16),
                           _buildTextField(
                             label: 'Business Name (Optional)',
                             hint: 'Trading name',
+                            controller: _businessNameController,
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
                             label: 'GSTIN (Optional)',
                             hint: '15-DIGIT ALPHANUMERIC',
+                            controller: _gstinController,
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
                             label: 'Address',
                             hint: 'Complete billing/shipping address',
                             maxLines: 3,
+                            controller: _addressController,
                           ),
                         ],
                       ),
@@ -168,11 +192,12 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
                           ),
                           child: Column(
                             children: [
-                              _buildBalanceField(
+                               _buildBalanceField(
                                 label: 'Cash Balance (INR)',
                                 hint: '0.00',
                                 prefixText: '₹',
                                 balanceType: _cashBalanceType,
+                                controller: _cashBalanceController,
                                 onTypeChanged: (val) => setState(() => _cashBalanceType = val),
                               ),
                               const SizedBox(height: 20),
@@ -180,6 +205,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
                                 label: 'Fine Gold (g)',
                                 hint: '0.000',
                                 balanceType: _goldBalanceType,
+                                controller: _goldBalanceController,
                                 onTypeChanged: (val) => setState(() => _goldBalanceType = val),
                               ),
                               const SizedBox(height: 20),
@@ -187,6 +213,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
                                 label: 'Diamond (ct)',
                                 hint: '0.000',
                                 balanceType: _diamondBalanceType,
+                                controller: _diamondBalanceController,
                                 onTypeChanged: (val) => setState(() => _diamondBalanceType = val),
                               ),
                             ],
@@ -206,24 +233,76 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
               child: SizedBox(
                 width: double.infinity,
                 height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF755E0B), // Dark gold color
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  icon: const Icon(Icons.save, color: Colors.white, size: 20),
-                  label: Text(
-                    'Save Party',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final partyState = ref.watch(partyNotifierProvider);
+                    
+                    return ElevatedButton.icon(
+                      onPressed: partyState.isLoading ? null : () async {
+                        if (_nameController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter party name')),
+                          );
+                          return;
+                        }
+                        
+                        if (_phoneController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter phone number')),
+                          );
+                          return;
+                        }
+
+                        final double cash = double.tryParse(_cashBalanceController.text) ?? 0.0;
+                        final double gold = double.tryParse(_goldBalanceController.text) ?? 0.0;
+                        final double diamond = double.tryParse(_diamondBalanceController.text) ?? 0.0;
+
+                        final success = await ref.read(partyNotifierProvider.notifier).createParty(
+                          name: _nameController.text.trim(),
+                          type: _tabController.index == 0 ? 'Customer' : 'Vendor',
+                          phone: _phoneController.text.trim(),
+                          address: _addressController.text.trim(),
+                          email: '', // Not in UI yet
+                          cashBalance: _cashBalanceType == 'Dr' ? cash : -cash,
+                          goldBalance: _goldBalanceType == 'Dr' ? gold : -gold,
+                          diamondBalance: _diamondBalanceType == 'Dr' ? diamond : -diamond,
+                        );
+
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Party saved successfully')),
+                          );
+                          Navigator.pop(context);
+                        } else if (partyState.error != null && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(partyState.error!)),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF755E0B),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: partyState.isLoading 
+                        ? const SizedBox(
+                            width: 20, 
+                            height: 20, 
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                          )
+                        : const Icon(Icons.save, color: Colors.white, size: 20),
+                      label: Text(
+                        partyState.isLoading ? 'Saving...' : 'Save Party',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -238,6 +317,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
     required String hint,
     IconData? prefixIcon,
     int maxLines = 1,
+    TextEditingController? controller,
   }) {
     List<TextSpan> labelSpans = [];
     if (label.contains('*')) {
@@ -282,6 +362,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
                   ? Icon(prefixIcon, color: Colors.grey[400])
                   : null,
             ),
+            controller: controller,
             style: GoogleFonts.montserrat(
               fontSize: 15,
               fontWeight: FontWeight.w500,
@@ -292,7 +373,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildPhoneField() {
+  Widget _buildPhoneField({TextEditingController? controller}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -340,6 +421,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
               ),
               Expanded(
                 child: TextField(
+                  controller: controller,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     hintText: '10-digit number',
@@ -366,6 +448,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
     String? prefixText,
     required String balanceType,
     required ValueChanged<String> onTypeChanged,
+    TextEditingController? controller,
   }) {
     return Column(
       children: [
@@ -412,6 +495,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> with SingleTickerProvid
                 ),
               Expanded(
                 child: TextField(
+                  controller: controller,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     border: InputBorder.none,

@@ -11,6 +11,7 @@ class PartyModel {
   final double cashBalance; // positive = they owe, negative = you owe
   final double goldBalanceGrams; // positive = they owe, negative = you owe
   final double silverBalanceGrams;
+  final double diamondBalanceCarats;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +26,7 @@ class PartyModel {
     required this.cashBalance,
     required this.goldBalanceGrams,
     required this.silverBalanceGrams,
+    required this.diamondBalanceCarats,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -41,6 +43,7 @@ class PartyModel {
       cashBalance: (map['cashBalance'] as num?)?.toDouble() ?? 0.0,
       goldBalanceGrams: (map['goldBalanceGrams'] as num?)?.toDouble() ?? 0.0,
       silverBalanceGrams: (map['silverBalanceGrams'] as num?)?.toDouble() ?? 0.0,
+      diamondBalanceCarats: (map['diamondBalanceCarats'] as num?)?.toDouble() ?? 0.0,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -57,12 +60,15 @@ class PartyModel {
       'cashBalance': cashBalance,
       'goldBalanceGrams': goldBalanceGrams,
       'silverBalanceGrams': silverBalanceGrams,
+      'diamondBalanceCarats': diamondBalanceCarats,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
 
-  /// Dr = positive balance (they owe you cash)
+  /// Dr = positive balance (they owe you)
+  /// Cr = negative balance (you owe them)
+  
   String get cashBalanceLabel {
     if (cashBalance > 0) return 'Dr (To Receive)';
     if (cashBalance < 0) return 'Cr (To Pay)';
@@ -72,6 +78,12 @@ class PartyModel {
   String get goldBalanceLabel {
     if (goldBalanceGrams > 0) return 'Dr (To Receive)';
     if (goldBalanceGrams < 0) return 'Cr (To Give)';
+    return 'Settled';
+  }
+
+  String get diamondBalanceLabel {
+    if (diamondBalanceCarats > 0) return 'Dr (To Receive)';
+    if (diamondBalanceCarats < 0) return 'Cr (To Give)';
     return 'Settled';
   }
 }
