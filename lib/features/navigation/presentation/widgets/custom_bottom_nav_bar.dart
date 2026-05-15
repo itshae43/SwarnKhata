@@ -83,28 +83,32 @@ class _NavBarItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF8A7311).withValues(alpha: 0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF8A7311) : const Color(0xFF9E9E9E),
-              size: 26,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF01565B) : Colors.transparent,
+                shape: BoxShape.circle,
+                border: isSelected ? Border.all(color: const Color(0xFFCFA63A), width: 1.5) : null,
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? const Color(0xFFCFA63A) : const Color(0xFF4D4635).withValues(alpha: 0.75),
+                size: 24,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.montserrat(
+              style: GoogleFonts.inder(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? const Color(0xFF8A7311) : const Color(0xFF9E9E9E),
+                color: isSelected ? const Color(0xFF01565B) : const Color(0xFF4D4635).withValues(alpha: 0.75),
               ),
             ),
           ],
