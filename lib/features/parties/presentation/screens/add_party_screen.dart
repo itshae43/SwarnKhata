@@ -10,8 +10,11 @@ class AddPartyScreen extends ConsumerStatefulWidget {
   ConsumerState<AddPartyScreen> createState() => _AddPartyScreenState();
 }
 
-class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
+  String _transactionType = 'IN';
+  String _category = 'Money';
+  bool _isSaved = false;
+
   String _cashBalanceType = 'Dr';
   String _goldBalanceType = 'Dr';
   String _diamondBalanceType = 'Dr';
@@ -19,26 +22,15 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
   // Controllers
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _businessNameController = TextEditingController();
-  final _gstinController = TextEditingController();
   final _addressController = TextEditingController();
   final _cashBalanceController = TextEditingController();
   final _goldBalanceController = TextEditingController();
   final _diamondBalanceController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
-    _businessNameController.dispose();
-    _gstinController.dispose();
     _addressController.dispose();
     _cashBalanceController.dispose();
     _goldBalanceController.dispose();
@@ -70,35 +62,6 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
       body: SafeArea(
         child: Column(
           children: [
-            // Tabs
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF2EFE8), // Light cream
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: const Color(0xFFDCA73A), // Gold color from image
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  labelColor: const Color(0xFF4A3E1F),
-                  unselectedLabelColor: const Color(0xFF6B5800).withOpacity(0.7),
-                  labelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
-                  unselectedLabelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
-                  tabs: const [
-                    Tab(text: 'Customer'),
-                    Tab(text: 'Vendor'),
-                  ],
-                ),
-              ),
-            ),
-            
             // Form
             Expanded(
               child: SingleChildScrollView(
@@ -106,6 +69,38 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
+                    // IN / OUT Toggle
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4EDE4),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildTransactionTypeButton(
+                              title: 'IN (Receive)',
+                              icon: Icons.arrow_downward,
+                              selectedColor: const Color(0xFF8A7311),
+                              isSelected: _transactionType == 'IN',
+                              onTap: () => setState(() => _transactionType = 'IN'),
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildTransactionTypeButton(
+                              title: 'OUT (Give)',
+                              icon: Icons.arrow_upward,
+                              selectedColor: Colors.black87,
+                              isSelected: _transactionType == 'OUT',
+                              onTap: () => setState(() => _transactionType = 'OUT'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
                     Container(
                       padding: const EdgeInsets.all(16.0),
                       decoration: BoxDecoration(
@@ -133,18 +128,6 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
                           _buildPhoneField(controller: _phoneController),
                           const SizedBox(height: 16),
                           _buildTextField(
-                            label: 'Business Name (Optional)',
-                            hint: 'Trading name',
-                            controller: _businessNameController,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            label: 'GSTIN (Optional)',
-                            hint: '15-DIGIT ALPHANUMERIC',
-                            controller: _gstinController,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
                             label: 'Address',
                             hint: 'Complete billing/shipping address',
                             maxLines: 3,
@@ -154,72 +137,80 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Opening Balance Section
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Opening Balance',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF333333),
-                          ),
+
+                    // Category Toggle
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Category',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13, 
+                          fontWeight: FontWeight.w600, 
+                          color: Colors.black87
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Initialize ledger accounts for this party.',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4EDE4),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: Row(
+                        children: [
+                          _buildCategoryButton('Money'),
+                          _buildCategoryButton('Gold'),
+                          _buildCategoryButton('Diamond'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Balance Fields based on Category
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                            border: Border.all(color: Colors.grey.withOpacity(0.1)),
-                          ),
-                          child: Column(
-                            children: [
-                               _buildBalanceField(
-                                label: 'Cash Balance (INR)',
-                                hint: '0.00',
-                                prefixText: '₹',
-                                balanceType: _cashBalanceType,
-                                controller: _cashBalanceController,
-                                onTypeChanged: (val) => setState(() => _cashBalanceType = val),
-                              ),
-                              const SizedBox(height: 20),
-                              _buildBalanceField(
-                                label: 'Fine Gold (g)',
-                                hint: '0.000',
-                                balanceType: _goldBalanceType,
-                                controller: _goldBalanceController,
-                                onTypeChanged: (val) => setState(() => _goldBalanceType = val),
-                              ),
-                              const SizedBox(height: 20),
-                              _buildBalanceField(
-                                label: 'Diamond (ct)',
-                                hint: '0.000',
-                                balanceType: _diamondBalanceType,
-                                controller: _diamondBalanceController,
-                                onTypeChanged: (val) => setState(() => _diamondBalanceType = val),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                      ),
+                      child: Column(
+                        children: [
+                          if (_category == 'Money')
+                            _buildBalanceField(
+                              label: 'Cash Balance (INR)',
+                              hint: '0.00',
+                              prefixText: '₹',
+                              balanceType: _cashBalanceType,
+                              controller: _cashBalanceController,
+                              onTypeChanged: (val) => setState(() => _cashBalanceType = val),
+                            ),
+                          if (_category == 'Gold')
+                            _buildBalanceField(
+                              label: 'Fine Gold (g)',
+                              hint: '0.000',
+                              balanceType: _goldBalanceType,
+                              controller: _goldBalanceController,
+                              onTypeChanged: (val) => setState(() => _goldBalanceType = val),
+                            ),
+                          if (_category == 'Diamond')
+                            _buildBalanceField(
+                              label: 'Diamond (ct)',
+                              hint: '0.000',
+                              balanceType: _diamondBalanceType,
+                              controller: _diamondBalanceController,
+                              onTypeChanged: (val) => setState(() => _diamondBalanceType = val),
+                            ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -238,7 +229,7 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
                     final partyState = ref.watch(partyNotifierProvider);
                     
                     return ElevatedButton.icon(
-                      onPressed: partyState.isLoading ? null : () async {
+                      onPressed: (partyState.isLoading || _isSaved) ? null : () async {
                         if (_nameController.text.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Please enter party name')),
@@ -259,20 +250,21 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
 
                         final success = await ref.read(partyNotifierProvider.notifier).createParty(
                           name: _nameController.text.trim(),
-                          type: _tabController.index == 0 ? 'Customer' : 'Vendor',
+                          type: _transactionType == 'IN' ? 'Customer' : 'Vendor',
                           phone: _phoneController.text.trim(),
                           address: _addressController.text.trim(),
-                          email: '', // Not in UI yet
+                          email: '', 
                           cashBalance: _cashBalanceType == 'Dr' ? cash : -cash,
                           goldBalance: _goldBalanceType == 'Dr' ? gold : -gold,
                           diamondBalance: _diamondBalanceType == 'Dr' ? diamond : -diamond,
                         );
 
                         if (success && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Party saved successfully')),
-                          );
-                          Navigator.pop(context);
+                          setState(() => _isSaved = true);
+                          await Future.delayed(const Duration(milliseconds: 800));
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
                         } else if (partyState.error != null && mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(partyState.error!)),
@@ -280,25 +272,38 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF755E0B),
+                        backgroundColor: _isSaved ? Colors.green : const Color(0xFF755E0B),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 0,
                       ),
-                      icon: partyState.isLoading 
-                        ? const SizedBox(
-                            width: 20, 
-                            height: 20, 
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                          )
-                        : const Icon(Icons.save, color: Colors.white, size: 20),
-                      label: Text(
-                        partyState.isLoading ? 'Saving...' : 'Save Party',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      icon: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return ScaleTransition(scale: animation, child: child);
+                        },
+                        child: _isSaved 
+                          ? const Icon(Icons.check_circle, color: Colors.white, size: 20, key: ValueKey('check'))
+                          : (partyState.isLoading 
+                              ? const SizedBox(
+                                  key: ValueKey('loading'),
+                                  width: 20, 
+                                  height: 20, 
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                )
+                              : const Icon(Icons.save, color: Colors.white, size: 20, key: ValueKey('save'))),
+                      ),
+                      label: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          _isSaved ? 'Saved!' : (partyState.isLoading ? 'Saving...' : 'Save Party'),
+                          key: ValueKey(_isSaved ? 'saved_text' : (partyState.isLoading ? 'saving_text' : 'save_text')),
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     );
@@ -307,6 +312,84 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> with SingleTick
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionTypeButton({
+    required String title,
+    required IconData icon,
+    required Color selectedColor,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: isSelected ? selectedColor : Colors.black54, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: GoogleFonts.montserrat(
+                color: isSelected ? selectedColor : Colors.black54,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryButton(String category) {
+    final isSelected = _category == category;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _category = category),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              category,
+              style: GoogleFonts.montserrat(
+                color: isSelected ? const Color(0xFF8A7311) : Colors.black54,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 14,
+              ),
+            ),
+          ),
         ),
       ),
     );
