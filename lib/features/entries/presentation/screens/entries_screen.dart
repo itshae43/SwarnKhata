@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 class EntriesScreen extends StatefulWidget {
@@ -10,10 +11,17 @@ class EntriesScreen extends StatefulWidget {
 
 class _EntriesScreenState extends State<EntriesScreen> {
   String _transactionType = 'IN';
-  String _mode = 'Cash';
-  String _itemCategory = '22K Gold Jewellery';
+  String _category = 'Money'; // Money, Gold, Diamond
+  String _paymentMode = 'Cash'; // Cash, UPI, RTGS
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
+  final TextEditingController _amountController = TextEditingController();
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +130,7 @@ class _EntriesScreenState extends State<EntriesScreen> {
 
               // Party / Customer
               const Text(
-                'Party / Customer',
+                'Customer',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
               ),
               const SizedBox(height: 8),
@@ -150,43 +158,9 @@ class _EntriesScreenState extends State<EntriesScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Item Category
+              // Category Toggle
               const Text(
-                'Item Category',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _itemCategory,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
-                    items: ['22K Gold Jewellery', '18K Gold', '24K Gold', 'Diamond'].map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value, style: const TextStyle(fontSize: 16)),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      if (newValue != null) {
-                        setState(() => _itemCategory = newValue);
-                      }
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Mode
-              const Text(
-                'Mode',
+                'Category',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
               ),
               const SizedBox(height: 8),
@@ -198,60 +172,276 @@ class _EntriesScreenState extends State<EntriesScreen> {
                 padding: const EdgeInsets.all(4),
                 child: Row(
                   children: [
-                    _buildModeButton('Cash'),
-                    _buildModeButton('Online'),
-                    _buildModeButton('Metal'),
+                    _buildCategoryButton('Money'),
+                    _buildCategoryButton('Gold'),
+                    _buildCategoryButton('Diamond'),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Amount / Weight
-              const Text(
-                'Amount / Weight',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4EDE4),
-                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: const Text('₹', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              // Dynamic Fields based on Category
+              if (_category == 'Money') ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
                   ),
-                  Expanded(
-                    child: TextField(
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 18),
-                      decoration: InputDecoration(
-                        hintText: '0.00',
-                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 18),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        border: OutlineInputBorder(
-                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey.shade400),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Payment Mode
+                      const Text(
+                        'Payment Mode',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          _buildPaymentModeChip('Cash'),
+                          const SizedBox(width: 12),
+                          _buildPaymentModeChip('UPI'),
+                          const SizedBox(width: 12),
+                          _buildPaymentModeChip('RTGS'),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Amount
+                      const Text(
+                        'Amount',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _amountController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          _IndianCurrencyFormatter(),
+                        ],
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          hintStyle: TextStyle(color: Colors.grey.shade300, fontSize: 20, fontWeight: FontWeight.bold),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF4EDE4),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text('₹', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF8A7311))),
+                            ),
+                          ),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade400),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade400),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: const Color(0xFF8A7311)),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (_category == 'Gold') ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Purity %',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: 16, color: Colors.black87),
+                            decoration: InputDecoration(
+                              hintText: '99.5',
+                              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+                              suffixIcon: Padding(
+                                padding: const EdgeInsets.only(right: 16.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('%', style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
+                                  ],
+                                ),
+                              ),
+                              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Weight (g)',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: 16, color: Colors.black87),
+                            decoration: InputDecoration(
+                              hintText: '0.00',
+                              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+                              suffixIcon: Padding(
+                                padding: const EdgeInsets.only(right: 16.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('g', style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
+                                  ],
+                                ),
+                              ),
+                              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (_category == 'Diamond') ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'CARAT (CT)',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                            decoration: InputDecoration(
+                              hintText: '0.00',
+                              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'PIECES',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                            decoration: InputDecoration(
+                              hintText: '0',
+                              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // Particulars / Notes
               const Text(
@@ -262,8 +452,8 @@ class _EntriesScreenState extends State<EntriesScreen> {
               TextField(
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Add details about the transaction...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  hintText: 'Add details about the metal quality,\nhallmark, etc...',
+                  hintStyle: TextStyle(color: Colors.grey.shade500),
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.all(16),
@@ -388,11 +578,11 @@ class _EntriesScreenState extends State<EntriesScreen> {
     );
   }
 
-  Widget _buildModeButton(String mode) {
-    final isSelected = _mode == mode;
+  Widget _buildCategoryButton(String category) {
+    final isSelected = _category == category;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _mode = mode),
+        onTap: () => setState(() => _category = category),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
@@ -410,13 +600,38 @@ class _EntriesScreenState extends State<EntriesScreen> {
           ),
           child: Center(
             child: Text(
-              mode,
+              category,
               style: TextStyle(
                 color: isSelected ? const Color(0xFF8A7311) : Colors.black54,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 fontSize: 14,
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentModeChip(String mode) {
+    final isSelected = _paymentMode == mode;
+    return GestureDetector(
+      onTap: () => setState(() => _paymentMode = mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFDF9EE) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFDCAE3D) : Colors.grey.shade300,
+          ),
+        ),
+        child: Text(
+          mode,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF8A7311) : Colors.black87,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 13,
           ),
         ),
       ),
@@ -462,5 +677,34 @@ class _EntriesScreenState extends State<EntriesScreen> {
         ),
       ),
     );
+  }
+}
+
+class _IndianCurrencyFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Only allow numbers (digitsOnly formatter will handle this too but being safe)
+    String cleanText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanText.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    try {
+      int value = int.parse(cleanText);
+      final formatter = NumberFormat.decimalPattern('en_IN');
+      String formattedText = formatter.format(value);
+
+      return newValue.copyWith(
+        text: formattedText,
+        selection: TextSelection.collapsed(offset: formattedText.length),
+      );
+    } catch (e) {
+      return oldValue;
+    }
   }
 }
