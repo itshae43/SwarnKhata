@@ -287,12 +287,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       PartyTransaction(
                         title: 'Bill #1024',
                         subtitle: 'Today • 10:30 AM',
-                        tag: 'Sales',
+                        notes: 'Purchased 2 gold chains. Needs hallmark certificate.',
                         amount: activity['amount'],
                         amountSubtitle: 'Gold (22K)',
                         amountColor: color,
-                        tagColor: const Color(0xFFFFF8E1),
-                        tagTextColor: const Color(0xFFF57F17),
                         category: 'metal',
                       ),
                     ],

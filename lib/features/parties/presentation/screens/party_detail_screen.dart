@@ -6,24 +6,20 @@ import 'package:google_fonts/google_fonts.dart';
 class PartyTransaction {
   final String title;
   final String subtitle; // e.g. "24 Oct 2023 • 10:30 AM"
-  final String tag; // e.g. "Sales", "Receipt", "Return"
+  final String? notes; // Optional notes below date/time
   final String amount; // e.g. "- 50.000 g" or "+ ₹ 1,00,000"
   final String amountSubtitle; // e.g. "Gold (22K)" or "NEFT / RTGS"
   final Color amountColor;
-  final Color tagColor;
-  final Color tagTextColor;
   final String category; // "cash", "online", "metal"
   final IconData? icon;
 
   const PartyTransaction({
     required this.title,
     required this.subtitle,
-    required this.tag,
+    this.notes,
     required this.amount,
     required this.amountSubtitle,
     required this.amountColor,
-    required this.tagColor,
-    required this.tagTextColor,
     required this.category,
     this.icon,
   });
@@ -71,7 +67,30 @@ class PartyDetailScreen extends StatefulWidget {
 class _PartyDetailScreenState extends State<PartyDetailScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
-  bool _showReminder = false;
+  String _selectedTab = 'Transactions';
+  String _selectedReminderTime = 'Tomorrow';
+  final TextEditingController _reminderMsgController = TextEditingController();
+  
+  DateTime? _customDate;
+  TimeOfDay? _customTime;
+  bool _isSavingReminder = false;
+
+  String _formatDate(DateTime date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Start with empty text so the placeholder "Type your message..." shows.
+  }
+
+  @override
+  void dispose() {
+    _reminderMsgController.dispose();
+    super.dispose();
+  }
 
   List<PartyTransaction> get _filteredTransactions {
     if (_selectedFilter == 'All') return widget.party.transactions;
@@ -106,17 +125,17 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                     const SizedBox(height: 12),
                     _buildDueSummaryCards(),
                     const SizedBox(height: 20),
-                    _buildActionButtons(),
-                    if (_showReminder) ...[
-                      const SizedBox(height: 16),
-                      _buildInlineReminder(),
-                    ],
+                    _buildTabs(),
                     const SizedBox(height: 20),
-                    _buildFilterTabs(),
-                    const SizedBox(height: 16),
-                    _buildTransactionList(),
-                    const SizedBox(height: 24),
-                    _buildOlderTransactionsLink(),
+                    if (_selectedTab == 'Transactions') ...[
+                      _buildFilterTabs(),
+                      const SizedBox(height: 16),
+                      _buildTransactionList(),
+                      const SizedBox(height: 24),
+                      _buildOlderTransactionsLink(),
+                    ] else ...[
+                      _buildReminderTabContent(),
+                    ],
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -346,68 +365,65 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
     );
   }
 
-  // ─── ACTION BUTTONS ─────────────────────────────────────────
-  Widget _buildActionButtons() {
+  // ─── TABS ─────────────────────────────────────────
+  Widget _buildTabs() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          children: [
-            _buildActionButton(
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabButton(
               icon: Icons.account_balance_wallet_outlined,
-              label: 'Transaction',
-              backgroundColor: const Color(0xFF4A3E1F),
-              textColor: Colors.white,
-              iconColor: Colors.white,
+              label: 'Transactions',
+              isSelected: _selectedTab == 'Transactions',
+              onTap: () => setState(() => _selectedTab = 'Transactions'),
             ),
-            const SizedBox(width: 12),
-            _buildActionButton(
-              icon: _showReminder ? Icons.close : Icons.message_outlined,
-              label: _showReminder ? 'Close' : 'Remind',
-              backgroundColor: _showReminder ? const Color(0xFF4A3E1F).withOpacity(0.15) : const Color(0xFFF5EFE6),
-              textColor: const Color(0xFF4A3E1F),
-              iconColor: const Color(0xFF4A3E1F),
-              onTap: () {
-                setState(() {
-                  _showReminder = !_showReminder;
-                });
-              },
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildTabButton(
+              icon: Icons.notifications_none,
+              label: 'Reminders',
+              isSelected: _selectedTab == 'Reminders',
+              onTap: () => setState(() => _selectedTab = 'Reminders'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildTabButton({
     required IconData icon,
     required String label,
-    required Color backgroundColor,
-    required Color textColor,
-    required Color iconColor,
-    VoidCallback? onTap,
+    required bool isSelected,
+    required VoidCallback onTap,
   }) {
+    final backgroundColor = isSelected ? const Color(0xFF4A3E1F) : const Color(0xFFF5EFE6);
+    final textColor = isSelected ? Colors.white : const Color(0xFF4A3E1F);
+    
     return Material(
       color: backgroundColor,
       borderRadius: BorderRadius.circular(28),
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
-        onTap: onTap ?? () {},
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: iconColor, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.montserrat(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
+              Icon(icon, color: textColor, size: 18),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -417,141 +433,536 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
     );
   }
 
-  // ─── INLINE REMINDER ────────────────────────────────────────
-  Widget _buildInlineReminder() {
+  // ─── REMINDER TAB CONTENT ─────────────────────────────────────
+  Widget _buildReminderTabContent() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0D8CA)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Add Reminder Form
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE0D8CA)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF9F7F2),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8E1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.notifications_active_outlined,
-                        size: 20, color: Color(0xFFD4AF37)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF9F7F2),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Send Reminder to ${widget.party.name}',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1E1E1E),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF8E1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.notifications_active_outlined,
+                            size: 20, color: Color(0xFFD4AF37)),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Message input
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9F7F2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0D8CA)),
-                    ),
-                    child: Text(
-                      '"Hi ${widget.party.name}, this is a friendly reminder regarding your pending balance. Kindly settle at your earliest convenience. Thank you!"',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                        height: 1.5,
-                        fontStyle: FontStyle.italic,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'New Reminder',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E1E1E),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  // Action buttons
-                  Material(
-                    color: const Color(0xFF4A3E1F),
-                    borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        // Save to reminders
-                        setState(() {
-                          _showReminder = false;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Saved to Reminders',
-                              style: GoogleFonts.montserrat(
-                                fontWeight: FontWeight.w600,
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Message Input
+                      TextField(
+                        controller: _reminderMsgController,
+                        maxLines: null,
+                        minLines: 3,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13,
+                          color: Colors.grey[800],
+                          height: 1.5,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Type your message...',
+                          filled: true,
+                          fillColor: const Color(0xFFF9F7F2),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE0D8CA)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE0D8CA)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF4A3E1F)),
+                          ),
+                          contentPadding: const EdgeInsets.all(14),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'When',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          'Tomorrow',
+                          'In 2 days',
+                          'Next Week',
+                          'Custom Date',
+                        ].map((time) {
+                          final isSelected = _selectedReminderTime == time;
+                          return GestureDetector(
+                            onTap: () => setState(() => _selectedReminderTime = time),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected ? const Color(0xFFD4AF37) : const Color(0xFFF5EFE6),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFFD4AF37) : const Color(0xFFE0D8CA),
+                                ),
+                              ),
+                              child: Text(
+                                time,
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  color: isSelected ? const Color(0xFF4A3E1F) : Colors.grey[700],
+                                ),
                               ),
                             ),
-                            backgroundColor: const Color(0xFF4A3E1F),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          );
+                        }).toList(),
+                      ),
+                      if (_selectedReminderTime == 'Custom Date') ...[
+                        const SizedBox(height: 16),
+                        Row(
                           children: [
-                            const Icon(Icons.bookmark_added_outlined, size: 18, color: Colors.white),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Save to Reminders',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Date',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  InkWell(
+                                    onTap: () async {
+                                      final picked = await showDatePicker(
+                                        context: context,
+                                        initialDate: _customDate ?? DateTime.now(),
+                                        firstDate: DateTime(2000),
+                                        lastDate: DateTime(2100),
+                                        builder: (context, child) {
+                                          return Theme(
+                                            data: Theme.of(context).copyWith(
+                                              colorScheme: const ColorScheme.light(
+                                                primary: Color(0xFF4A3E1F),
+                                                onPrimary: Colors.white,
+                                                onSurface: Colors.black,
+                                              ),
+                                            ),
+                                            child: child!,
+                                          );
+                                        },
+                                      );
+                                      if (picked != null) {
+                                        setState(() => _customDate = picked);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: const Color(0xFFD4AF37)),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.calendar_today_outlined, size: 18, color: Color(0xFF6B5800)),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _customDate != null ? _formatDate(_customDate!) : 'Select Date',
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: _customDate != null ? Colors.black87 : Colors.grey[500],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Time',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  InkWell(
+                                    onTap: () async {
+                                      final picked = await showTimePicker(
+                                        context: context,
+                                        initialTime: _customTime ?? TimeOfDay.now(),
+                                        builder: (context, child) {
+                                          return Theme(
+                                            data: Theme.of(context).copyWith(
+                                              colorScheme: const ColorScheme.light(
+                                                primary: Color(0xFF4A3E1F),
+                                                onPrimary: Colors.white,
+                                                onSurface: Colors.black,
+                                              ),
+                                            ),
+                                            child: child!,
+                                          );
+                                        },
+                                      );
+                                      if (picked != null) {
+                                        setState(() => _customTime = picked);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: const Color(0xFFE0D8CA)),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.access_time, size: 18, color: Color(0xFF6B5800)),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _customTime != null ? _customTime!.format(context) : 'Select Time',
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: _customTime != null ? Colors.black87 : Colors.grey[500],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
+                      ],
+                      const SizedBox(height: 24),
+                      // Save button
+                      Material(
+                        color: const Color(0xFF4A3E1F),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: _isSavingReminder
+                              ? null
+                              : () async {
+                                  setState(() => _isSavingReminder = true);
+                                  // Simulate network save
+                                  await Future.delayed(const Duration(milliseconds: 800));
+                                  if (mounted) {
+                                    setState(() {
+                                      _isSavingReminder = false;
+                                      _reminderMsgController.clear();
+                                      _customDate = null;
+                                      _customTime = null;
+                                      _selectedReminderTime = 'Tomorrow';
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Saved to Reminders',
+                                          style: GoogleFonts.montserrat(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        backgroundColor: const Color(0xFF4A3E1F),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (_isSavingReminder)
+                                  const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                else
+                                  const Icon(Icons.bookmark_added_outlined, size: 18, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _isSavingReminder ? 'Saving...' : 'Save to Reminders',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Previous Reminders Section
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 1,
+                  color: const Color(0xFFE0D8CA),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'PREVIOUS REMINDERS',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[600],
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 1,
+                  color: const Color(0xFFE0D8CA),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Mock reminder items
+          _buildPreviousReminderCard(
+            status: 'Pending',
+            date: 'Tomorrow, 10:00 AM',
+            title: 'Call after 2 days',
+            note: 'Discuss the pending payment for invoice #INV-2023-089. They promised to clear half the amount.',
+            isPending: true,
+          ),
+          _buildPreviousReminderCard(
+            status: 'Pending',
+            date: 'Oct 25, 2023',
+            title: 'Share new Diwali collection',
+            note: 'Send PDF catalog of the new antique gold temple jewellery collection.',
+            isPending: true,
+          ),
+          _buildPreviousReminderCard(
+            status: 'Completed',
+            date: 'Oct 10, 2023',
+            title: 'Collect silver scrap',
+            note: 'Picked up 2kg silver scrap for melting.',
+            isPending: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviousReminderCard({
+    required String status,
+    required String date,
+    required String title,
+    required String note,
+    required bool isPending,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0D8CA)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isPending ? const Color(0xFFF5EFE6) : const Color(0xFFF9F7F2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isPending ? const Color(0xFFE0D8CA) : Colors.transparent,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        if (isPending)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF6B5800),
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        else
+                          const Icon(Icons.check, size: 12, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          status,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isPending ? const Color(0xFF6B5800) : Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    date,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700],
                     ),
                   ),
                 ],
               ),
+              Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: GoogleFonts.montserrat(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1E1E1E),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            note,
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              color: Colors.grey[700],
+              height: 1.4,
+            ),
+          ),
+          if (isPending) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.check, size: 14),
+                  label: const Text('Mark Done'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF4A3E1F),
+                    side: const BorderSide(color: Color(0xFFE0D8CA)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.edit_outlined, size: 14),
+                  label: const Text('Edit'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.grey[700],
+                    side: const BorderSide(color: Color(0xFFE0D8CA)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -635,23 +1046,17 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
   }
 
   Widget _buildTransactionCard(PartyTransaction txn) {
-    // Determine left border color based on tag
+    // Determine left border color based on category
     Color leftBorderColor;
-    switch (txn.tag.toLowerCase()) {
-      case 'sales':
-        leftBorderColor = const Color(0xFFC7A22A);
-        break;
-      case 'receipt':
-        leftBorderColor = const Color(0xFF2852C6);
-        break;
-      case 'return':
-        leftBorderColor = const Color(0xFF6B5800);
-        break;
-      case 'purchase':
-        leftBorderColor = const Color(0xFFC62828);
-        break;
-      default:
-        leftBorderColor = const Color(0xFF4A3E1F);
+    final cat = txn.category.toLowerCase();
+    if (cat == 'metal' || cat == 'gold') {
+      leftBorderColor = const Color(0xFFC7A22A);
+    } else if (cat == 'diamond') {
+      leftBorderColor = const Color(0xFF7E57C2);
+    } else if (cat == 'cash' || cat == 'online' || cat == 'money') {
+      leftBorderColor = const Color(0xFF2852C6);
+    } else {
+      leftBorderColor = const Color(0xFF4A3E1F);
     }
 
     return Container(
@@ -752,26 +1157,24 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    // Tag chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: txn.tagColor,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: txn.tagTextColor.withOpacity(0.15),
+                    if (txn.notes != null && txn.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9F7F2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          txn.notes!,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                            height: 1.4,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        txn.tag,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: txn.tagTextColor,
-                        ),
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),
