@@ -12,7 +12,7 @@ class LedgerScreen extends StatefulWidget {
 
 class _LedgerScreenState extends State<LedgerScreen> {
   String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Cash', 'Gold', 'Diamond'];
+  final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
 
   final List<Map<String, dynamic>> _recentActivity = [
     {

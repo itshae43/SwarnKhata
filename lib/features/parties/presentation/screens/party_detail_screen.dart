@@ -70,13 +70,23 @@ class PartyDetailScreen extends StatefulWidget {
 
 class _PartyDetailScreenState extends State<PartyDetailScreen> {
   String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Cash', 'Online', 'Metal'];
+  final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
+  bool _showReminder = false;
 
   List<PartyTransaction> get _filteredTransactions {
     if (_selectedFilter == 'All') return widget.party.transactions;
-    return widget.party.transactions
-        .where((t) => t.category.toLowerCase() == _selectedFilter.toLowerCase())
-        .toList();
+    return widget.party.transactions.where((t) {
+      final category = t.category.toLowerCase();
+      final filter = _selectedFilter.toLowerCase();
+      
+      if (filter == 'money') {
+        return category == 'cash' || category == 'online' || category == 'money';
+      }
+      if (filter == 'gold') {
+        return category == 'metal' || category == 'gold';
+      }
+      return category == filter;
+    }).toList();
   }
 
   @override
@@ -97,6 +107,10 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                     _buildDueSummaryCards(),
                     const SizedBox(height: 20),
                     _buildActionButtons(),
+                    if (_showReminder) ...[
+                      const SizedBox(height: 16),
+                      _buildInlineReminder(),
+                    ],
                     const SizedBox(height: 20),
                     _buildFilterTabs(),
                     const SizedBox(height: 16),
@@ -343,26 +357,23 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
           children: [
             _buildActionButton(
               icon: Icons.account_balance_wallet_outlined,
-              label: 'Settle',
+              label: 'Transaction',
               backgroundColor: const Color(0xFF4A3E1F),
               textColor: Colors.white,
               iconColor: Colors.white,
             ),
             const SizedBox(width: 12),
             _buildActionButton(
-              icon: Icons.message_outlined,
-              label: 'Remind',
-              backgroundColor: const Color(0xFFF5EFE6),
+              icon: _showReminder ? Icons.close : Icons.message_outlined,
+              label: _showReminder ? 'Close' : 'Remind',
+              backgroundColor: _showReminder ? const Color(0xFF4A3E1F).withOpacity(0.15) : const Color(0xFFF5EFE6),
               textColor: const Color(0xFF4A3E1F),
               iconColor: const Color(0xFF4A3E1F),
-            ),
-            const SizedBox(width: 12),
-            _buildActionButton(
-              icon: Icons.file_copy_outlined,
-              label: 'Export',
-              backgroundColor: const Color(0xFFF5EFE6),
-              textColor: const Color(0xFF4A3E1F),
-              iconColor: const Color(0xFF4A3E1F),
+              onTap: () {
+                setState(() {
+                  _showReminder = !_showReminder;
+                });
+              },
             ),
           ],
         ),
@@ -376,15 +387,14 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
     required Color backgroundColor,
     required Color textColor,
     required Color iconColor,
+    VoidCallback? onTap,
   }) {
     return Material(
       color: backgroundColor,
       borderRadius: BorderRadius.circular(28),
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
-        onTap: () {
-          // Action placeholder
-        },
+        onTap: onTap ?? () {},
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           child: Row(
@@ -402,6 +412,145 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ─── INLINE REMINDER ────────────────────────────────────────
+  Widget _buildInlineReminder() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0D8CA)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF9F7F2),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.notifications_active_outlined,
+                        size: 20, color: Color(0xFFD4AF37)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Send Reminder to ${widget.party.name}',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E1E1E),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Message input
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9F7F2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE0D8CA)),
+                    ),
+                    child: Text(
+                      '"Hi ${widget.party.name}, this is a friendly reminder regarding your pending balance. Kindly settle at your earliest convenience. Thank you!"',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        height: 1.5,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Action buttons
+                  Material(
+                    color: const Color(0xFF4A3E1F),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        // Save to reminders
+                        setState(() {
+                          _showReminder = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Saved to Reminders',
+                              style: GoogleFonts.montserrat(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            backgroundColor: const Color(0xFF4A3E1F),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.bookmark_added_outlined, size: 18, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Save to Reminders',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

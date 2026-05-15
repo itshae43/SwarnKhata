@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../providers/party_providers.dart';
 
 class AddPartyScreen extends ConsumerStatefulWidget {
@@ -13,28 +15,29 @@ class AddPartyScreen extends ConsumerStatefulWidget {
 class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
   String _transactionType = 'IN';
   String _category = 'Money';
+  String _paymentMode = 'Cash'; // Cash, UPI, RTGS
   bool _isSaved = false;
-
-  String _cashBalanceType = 'Dr';
-  String _goldBalanceType = 'Dr';
-  String _diamondBalanceType = 'Dr';
 
   // Controllers
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
-  final _cashBalanceController = TextEditingController();
-  final _goldBalanceController = TextEditingController();
-  final _diamondBalanceController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _goldPurityController = TextEditingController();
+  final _goldWeightController = TextEditingController();
+  final _diamondCaratController = TextEditingController();
+  final _diamondPiecesController = TextEditingController();
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
-    _cashBalanceController.dispose();
-    _goldBalanceController.dispose();
-    _diamondBalanceController.dispose();
+    _amountController.dispose();
+    _goldPurityController.dispose();
+    _goldWeightController.dispose();
+    _diamondCaratController.dispose();
+    _diamondPiecesController.dispose();
     super.dispose();
   }
 
@@ -68,6 +71,7 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // IN / OUT Toggle
                     Container(
@@ -165,53 +169,271 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
-                    // Balance Fields based on Category
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                    // Dynamic Fields based on Category
+                    if (_category == 'Money') ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Payment Mode
+                            Text(
+                              'Payment Mode',
+                              style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                _buildPaymentModeChip('Cash'),
+                                const SizedBox(width: 12),
+                                _buildPaymentModeChip('UPI'),
+                                const SizedBox(width: 12),
+                                _buildPaymentModeChip('RTGS'),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Amount
+                            Text(
+                              'Amount',
+                              style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _amountController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _IndianCurrencyFormatter(),
+                              ],
+                              style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                              decoration: InputDecoration(
+                                hintText: '0',
+                                hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade300, fontSize: 20, fontWeight: FontWeight.bold),
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF4EDE4),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text('₹', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF8A7311))),
+                                  ),
+                                ),
+                                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.grey.shade400),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.grey.shade400),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(color: Color(0xFF8A7311)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    if (_category == 'Gold') ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Purity %',
+                                  style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _goldPurityController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  textAlign: TextAlign.right,
+                                  style: GoogleFonts.montserrat(fontSize: 16, color: Colors.black87),
+                                  decoration: InputDecoration(
+                                    hintText: '99.5',
+                                    hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 16),
+                                    suffixIcon: Padding(
+                                      padding: const EdgeInsets.only(right: 16.0),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text('%', style: GoogleFonts.montserrat(fontSize: 18, color: Colors.grey.shade600)),
+                                        ],
+                                      ),
+                                    ),
+                                    suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Weight (g)',
+                                  style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _goldWeightController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  textAlign: TextAlign.right,
+                                  style: GoogleFonts.montserrat(fontSize: 16, color: Colors.black87),
+                                  decoration: InputDecoration(
+                                    hintText: '0.00',
+                                    hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 16),
+                                    suffixIcon: Padding(
+                                      padding: const EdgeInsets.only(right: 16.0),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text('g', style: GoogleFonts.montserrat(fontSize: 18, color: Colors.grey.shade600)),
+                                        ],
+                                      ),
+                                    ),
+                                    suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
-                        border: Border.all(color: Colors.grey.withOpacity(0.1)),
                       ),
-                      child: Column(
+                    ],
+
+                    if (_category == 'Diamond') ...[
+                      Row(
                         children: [
-                          if (_category == 'Money')
-                            _buildBalanceField(
-                              label: 'Cash Balance (INR)',
-                              hint: '0.00',
-                              prefixText: '₹',
-                              balanceType: _cashBalanceType,
-                              controller: _cashBalanceController,
-                              onTypeChanged: (val) => setState(() => _cashBalanceType = val),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'CARAT (CT)',
+                                  style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _diamondCaratController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                                  decoration: InputDecoration(
+                                    hintText: '0.00',
+                                    hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          if (_category == 'Gold')
-                            _buildBalanceField(
-                              label: 'Fine Gold (g)',
-                              hint: '0.000',
-                              balanceType: _goldBalanceType,
-                              controller: _goldBalanceController,
-                              onTypeChanged: (val) => setState(() => _goldBalanceType = val),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'PIECES',
+                                  style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _diamondPiecesController,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                                  decoration: InputDecoration(
+                                    hintText: '0',
+                                    hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          if (_category == 'Diamond')
-                            _buildBalanceField(
-                              label: 'Diamond (ct)',
-                              hint: '0.000',
-                              balanceType: _diamondBalanceType,
-                              controller: _diamondBalanceController,
-                              onTypeChanged: (val) => setState(() => _diamondBalanceType = val),
-                            ),
+                          ),
                         ],
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -244,9 +466,18 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
                           return;
                         }
 
-                        final double cash = double.tryParse(_cashBalanceController.text) ?? 0.0;
-                        final double gold = double.tryParse(_goldBalanceController.text) ?? 0.0;
-                        final double diamond = double.tryParse(_diamondBalanceController.text) ?? 0.0;
+                        // Parse the formatted cash amount
+                        String cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+                        double cashValue = double.tryParse(cleanAmount) ?? 0.0;
+                        
+                        // Parse other values
+                        double goldValue = double.tryParse(_goldWeightController.text) ?? 0.0;
+                        double diamondValue = double.tryParse(_diamondCaratController.text) ?? 0.0;
+
+                        // Apply sign based on transaction type (IN = Dr/Positive, OUT = Cr/Negative)
+                        final double cash = _transactionType == 'IN' ? cashValue : -cashValue;
+                        final double gold = _transactionType == 'IN' ? goldValue : -goldValue;
+                        final double diamond = _transactionType == 'IN' ? diamondValue : -diamondValue;
 
                         final success = await ref.read(partyNotifierProvider.notifier).createParty(
                           name: _nameController.text.trim(),
@@ -254,9 +485,9 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
                           phone: _phoneController.text.trim(),
                           address: _addressController.text.trim(),
                           email: '', 
-                          cashBalance: _cashBalanceType == 'Dr' ? cash : -cash,
-                          goldBalance: _goldBalanceType == 'Dr' ? gold : -gold,
-                          diamondBalance: _diamondBalanceType == 'Dr' ? diamond : -diamond,
+                          cashBalance: cash,
+                          goldBalance: gold,
+                          diamondBalance: diamond,
                         );
 
                         if (success && mounted) {
@@ -395,6 +626,31 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
     );
   }
 
+  Widget _buildPaymentModeChip(String mode) {
+    final isSelected = _paymentMode == mode;
+    return GestureDetector(
+      onTap: () => setState(() => _paymentMode = mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFDF9EE) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFDCAE3D) : Colors.grey.shade300,
+          ),
+        ),
+        child: Text(
+          mode,
+          style: GoogleFonts.montserrat(
+            color: isSelected ? const Color(0xFF8A7311) : Colors.black87,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required String label,
     required String hint,
@@ -524,102 +780,32 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
       ],
     );
   }
+}
 
-  Widget _buildBalanceField({
-    required String label,
-    required String hint,
-    String? prefixText,
-    required String balanceType,
-    required ValueChanged<String> onTypeChanged,
-    TextEditingController? controller,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.montserrat(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey[800],
-              ),
-            ),
-            Text(
-              'Dr / Cr',
-              style: GoogleFonts.montserrat(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF8A7311),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE0D8C3)),
-          ),
-          child: Row(
-            children: [
-              if (prefixText != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                  child: Text(
-                    prefixText,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: hint,
-                    hintStyle: GoogleFonts.montserrat(color: Colors.grey[400]),
-                    contentPadding: EdgeInsets.only(
-                      bottom: 4,
-                      left: prefixText == null ? 16 : 0,
-                    ),
-                  ),
-                  style: GoogleFonts.montserrat(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Icon(Icons.unfold_more, size: 20, color: Colors.grey[400]),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => onTypeChanged(balanceType == 'Dr' ? 'Cr' : 'Dr'),
-                child: Container(
-                  width: 56,
-                  height: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF2EFE8),
-                    borderRadius: BorderRadius.horizontal(right: Radius.circular(7)),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    balanceType,
-                    style: GoogleFonts.montserrat(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF4A3E1F),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+class _IndianCurrencyFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String cleanText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanText.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    try {
+      int value = int.parse(cleanText);
+      final formatter = NumberFormat.decimalPattern('en_IN');
+      String formattedText = formatter.format(value);
+
+      return newValue.copyWith(
+        text: formattedText,
+        selection: TextSelection.collapsed(offset: formattedText.length),
+      );
+    } catch (e) {
+      return oldValue;
+    }
   }
 }
