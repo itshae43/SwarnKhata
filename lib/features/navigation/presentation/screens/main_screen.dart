@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../../entries/presentation/screens/entries_screen.dart';
 import '../../../ledger/presentation/screens/ledger_screen.dart';
-import '../../../parties/presentation/screens/parties_screen.dart';
+import '../../../reminders/presentation/screens/reminders_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
@@ -22,7 +22,7 @@ class MainScreen extends ConsumerWidget {
       const HomeScreen(),
       const EntriesScreen(),
       const LedgerScreen(),
-      const PartiesScreen(),
+      const RemindersScreen(),
       const SettingsScreen(),
     ];
 

@@ -46,8 +46,8 @@ class CustomBottomNavBar extends ConsumerWidget {
                 onTap: () => ref.read(navigationProvider.notifier).setIndex(2),
               ),
               _NavBarItem(
-                icon: Icons.groups,
-                label: 'Parties',
+                icon: Icons.notifications_outlined,
+                label: 'Reminders',
                 isSelected: currentIndex == 3,
                 onTap: () => ref.read(navigationProvider.notifier).setIndex(3),
               ),
