@@ -329,6 +329,7 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
     bool isGoldYouOwe = party.goldBalanceGrams < 0;
 
     return PartyDetail(
+      id: party.id,
       name: name,
       type: type,
       location: location,

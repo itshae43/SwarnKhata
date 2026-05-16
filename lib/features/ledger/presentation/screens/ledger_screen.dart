@@ -1,45 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
+import 'package:intl/intl.dart';
+
 import '../../../parties/presentation/screens/party_detail_screen.dart';
 
-class LedgerScreen extends StatefulWidget {
+class LedgerScreen extends ConsumerStatefulWidget {
   const LedgerScreen({super.key});
 
   @override
-  State<LedgerScreen> createState() => _LedgerScreenState();
+  ConsumerState<LedgerScreen> createState() => _LedgerScreenState();
 }
 
-class _LedgerScreenState extends State<LedgerScreen> {
+class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
 
-  final List<Map<String, dynamic>> _recentActivity = [
-    {
-      'name': 'Ramesh Jewellers',
-      'initial': 'R',
-      'time': 'Last active: 2 hrs ago',
-      'amount': '₹ 1,25,000',
-      'type': 'Dr',
-      'isCredit': false,
-    },
-    {
-      'name': 'Mehta Gold',
-      'initial': 'M',
-      'time': 'Last active: yesterday',
-      'amount': '50g Gold',
-      'type': 'Cr',
-      'isCredit': true,
-    },
-    {
-      'name': 'Kalyan Traders',
-      'initial': 'K',
-      'time': 'Last active: 3 days ago',
-      'amount': '₹ 45,500',
-      'type': 'Dr',
-      'isCredit': false,
-    },
-  ];
+
 
   @override
   Widget build(BuildContext context) {
@@ -261,153 +241,201 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   Widget _buildRecentActivityList() {
-    return Column(
-      children: _recentActivity.map((activity) {
-        final isCredit = activity['isCredit'] as bool;
-        final color = isCredit ? const Color(0xFF2852C6) : const Color(0xFFC62828);
-        
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PartyDetailScreen(
-                  party: PartyDetail(
-                    name: activity['name'],
-                    type: 'Wholesale Partner',
-                    location: 'Mumbai',
-                    initial: activity['initial'],
-                    totalCashDue: activity['isCredit'] ? '₹ 0' : activity['amount'],
-                    cashDueLabel: activity['isCredit'] ? 'Settled' : 'They Owe',
-                    isCashYouOwe: false,
-                    totalGoldDue: activity['isCredit'] ? activity['amount'] : '0g',
-                    goldDueLabel: activity['isCredit'] ? 'You Owe' : 'Settled',
-                    isGoldYouOwe: true,
-                    transactions: [
-                      PartyTransaction(
-                        title: 'Bill #1024',
-                        subtitle: 'Today • 10:30 AM',
-                        notes: 'Purchased 2 gold chains. Needs hallmark certificate.',
-                        amount: activity['amount'],
-                        amountSubtitle: 'Gold (22K)',
-                        amountColor: color,
-                        category: 'metal',
+    final transactionsAsync = ref.watch(transactionsStreamProvider);
+
+    return transactionsAsync.when(
+      data: (transactions) {
+        if (transactions.isEmpty) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Text('No recent activity'),
+          ));
+        }
+
+        // Apply filters
+        final filtered = transactions.where((tx) {
+          if (_selectedFilter == 'All') return true;
+          if (_selectedFilter == 'Money' && tx.metalType.isEmpty) return true;
+          if (_selectedFilter == 'Gold' && tx.metalType == 'gold') return true;
+          if (_selectedFilter == 'Diamond' && tx.metalType == 'diamond') return true;
+          return false;
+        }).toList();
+
+        return Column(
+          children: filtered.map((activity) {
+            final isCredit = activity.type == TransactionType.receipt || activity.type == TransactionType.metalIn;
+            final color = isCredit ? const Color(0xFF2852C6) : const Color(0xFFC62828);
+            final typeLabel = isCredit ? 'In' : 'Out';
+            
+            String amountStr = '';
+            if (activity.metalType.isEmpty) {
+              amountStr = '₹ ${activity.cashAmount.toStringAsFixed(2)}';
+              if (activity.paymentMode != PaymentMode.cash) {
+                amountStr += ' (${activity.paymentMode == PaymentMode.online ? "UPI/RTGS" : "Mixed"})';
+              } else {
+                amountStr += ' (Cash)';
+              }
+            } else if (activity.metalType == 'gold') {
+              amountStr = '${activity.metalWeight}g Gold';
+              if (activity.metalPurity.isNotEmpty) amountStr += ' (${activity.metalPurity}%)';
+            } else if (activity.metalType == 'diamond') {
+              amountStr = '${activity.metalWeight}ct Diamond';
+              if (activity.metalPurity.isNotEmpty) amountStr += ' (${activity.metalPurity})';
+            }
+
+            final initial = activity.partyName.isNotEmpty ? activity.partyName[0].toUpperCase() : '?';
+            final timeStr = DateFormat('dd MMM yyyy • hh:mm a').format(activity.date);
+
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PartyDetailScreen(
+                      party: PartyDetail(
+                        id: activity.partyId,
+                        name: activity.partyName,
+                        type: 'Customer',
+                        location: '',
+                        initial: initial,
+                        totalCashDue: '₹ 0',
+                        cashDueLabel: 'Settled',
+                        isCashYouOwe: false,
+                        totalGoldDue: '0g',
+                        goldDueLabel: 'Settled',
+                        isGoldYouOwe: true,
+                        transactions: [], // Will be handled dynamically in PartyDetailScreen
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.withOpacity(0.15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        width: 5,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            bottomLeft: Radius.circular(16),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF0EBE1),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  initial,
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF6B5800),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      activity.partyName,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      timeStr,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    if (activity.notes.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        activity.notes,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 11,
+                                          color: Colors.grey[500],
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    amountStr,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: color,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    typeLabel,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: color,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
             );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.withOpacity(0.15)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 5,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        bottomLeft: Radius.circular(16),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF0EBE1),
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              activity['initial'],
-                              style: GoogleFonts.montserrat(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF6B5800),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  activity['name'],
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  activity['time'],
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                activity['amount'],
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: color,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                activity['type'],
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          }).toList(),
         );
-      }).toList(),
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 }

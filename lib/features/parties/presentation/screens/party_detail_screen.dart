@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
+import 'package:intl/intl.dart';
 
 // ──────────────────────────── DATA MODELS ────────────────────────────
 
@@ -26,6 +30,7 @@ class PartyTransaction {
 }
 
 class PartyDetail {
+  final String id;
   final String name;
   final String type; // e.g. "Wholesale Partner"
   final String location; // e.g. "Mumbai"
@@ -39,6 +44,7 @@ class PartyDetail {
   final List<PartyTransaction> transactions;
 
   const PartyDetail({
+    required this.id,
     required this.name,
     required this.type,
     required this.location,
@@ -55,16 +61,18 @@ class PartyDetail {
 
 // ──────────────────────────── SCREEN ────────────────────────────
 
-class PartyDetailScreen extends StatefulWidget {
+
+
+class PartyDetailScreen extends ConsumerStatefulWidget {
   final PartyDetail party;
 
   const PartyDetailScreen({super.key, required this.party});
 
   @override
-  State<PartyDetailScreen> createState() => _PartyDetailScreenState();
+  ConsumerState<PartyDetailScreen> createState() => _PartyDetailScreenState();
 }
 
-class _PartyDetailScreenState extends State<PartyDetailScreen> {
+class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
   String _selectedTab = 'Transactions';
@@ -92,19 +100,13 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
     super.dispose();
   }
 
-  List<PartyTransaction> get _filteredTransactions {
-    if (_selectedFilter == 'All') return widget.party.transactions;
-    return widget.party.transactions.where((t) {
-      final category = t.category.toLowerCase();
-      final filter = _selectedFilter.toLowerCase();
-      
-      if (filter == 'money') {
-        return category == 'cash' || category == 'online' || category == 'money';
-      }
-      if (filter == 'gold') {
-        return category == 'metal' || category == 'gold';
-      }
-      return category == filter;
+  List<TransactionModel> _getFilteredTransactions(List<TransactionModel> transactions) {
+    if (_selectedFilter == 'All') return transactions;
+    return transactions.where((t) {
+      if (_selectedFilter == 'Money' && t.metalType.isEmpty) return true;
+      if (_selectedFilter == 'Gold' && t.metalType == 'gold') return true;
+      if (_selectedFilter == 'Diamond' && t.metalType == 'diamond') return true;
+      return false;
     }).toList();
   }
 
@@ -1013,50 +1015,74 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
 
   // ─── TRANSACTION LIST ───────────────────────────────────────
   Widget _buildTransactionList() {
-    final transactions = _filteredTransactions;
+    final transactionsAsync = ref.watch(partyTransactionsStreamProvider(widget.party.id));
 
-    if (transactions.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 12),
-              Text(
-                'No transactions found',
-                style: GoogleFonts.montserrat(
-                  fontSize: 15,
-                  color: Colors.grey[500],
-                  fontWeight: FontWeight.w500,
-                ),
+    return transactionsAsync.when(
+      data: (transactions) {
+        final filteredTransactions = _getFilteredTransactions(transactions);
+
+        if (filteredTransactions.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 60),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey[400]),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No transactions found',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 15,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
+          );
+        }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: transactions.map((txn) => _buildTransactionCard(txn)).toList(),
-      ),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: filteredTransactions.map((txn) => _buildTransactionCard(txn)).toList(),
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 
-  Widget _buildTransactionCard(PartyTransaction txn) {
+  Widget _buildTransactionCard(TransactionModel txn) {
     // Determine left border color based on category
     Color leftBorderColor;
-    final cat = txn.category.toLowerCase();
-    if (cat == 'metal' || cat == 'gold') {
+    final cat = txn.metalType;
+    if (cat == 'gold') {
       leftBorderColor = const Color(0xFFC7A22A);
     } else if (cat == 'diamond') {
       leftBorderColor = const Color(0xFF7E57C2);
-    } else if (cat == 'cash' || cat == 'online' || cat == 'money') {
+    } else if (cat.isEmpty) {
       leftBorderColor = const Color(0xFF2852C6);
     } else {
       leftBorderColor = const Color(0xFF4A3E1F);
+    }
+
+    final isCredit = txn.type == TransactionType.receipt || txn.type == TransactionType.metalIn;
+    final color = isCredit ? const Color(0xFF2852C6) : const Color(0xFFC62828);
+    
+    String amountStr = '';
+    String amountSubtitle = '';
+    if (txn.metalType.isEmpty) {
+      amountStr = '₹ ${txn.cashAmount.toStringAsFixed(2)}';
+      amountSubtitle = txn.paymentMode == PaymentMode.cash ? 'Cash' : 'UPI / RTGS';
+    } else if (txn.metalType == 'gold') {
+      amountStr = '${txn.metalWeight}g';
+      amountSubtitle = txn.metalPurity.isNotEmpty ? 'Gold (${txn.metalPurity}%)' : 'Gold';
+    } else if (txn.metalType == 'diamond') {
+      amountStr = '${txn.metalWeight}ct';
+      amountSubtitle = txn.metalPurity.isNotEmpty ? 'Diamond (${txn.metalPurity})' : 'Diamond';
     }
 
     return Container(
@@ -1107,22 +1133,18 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                               Row(
                                 children: [
                                   Text(
-                                    txn.title,
+                                    txn.typeLabel,
                                     style: GoogleFonts.montserrat(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xFF1E1E1E),
                                     ),
                                   ),
-                                  if (txn.icon != null) ...[
-                                    const SizedBox(width: 6),
-                                    Icon(txn.icon, size: 18, color: Colors.grey[600]),
-                                  ],
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                txn.subtitle,
+                                DateFormat('dd MMM yyyy • hh:mm a').format(txn.date),
                                 style: GoogleFonts.montserrat(
                                   fontSize: 12,
                                   color: Colors.grey[500],
@@ -1137,27 +1159,27 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              txn.amount,
+                              amountStr,
                               style: GoogleFonts.montserrat(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: txn.amountColor,
+                                color: color,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              txn.amountSubtitle,
+                              amountSubtitle,
                               style: GoogleFonts.montserrat(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.grey[600],
+                                color: color.withOpacity(0.8),
                               ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                    if (txn.notes != null && txn.notes!.isNotEmpty) ...[
+                    if (txn.notes.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(10),
@@ -1166,7 +1188,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          txn.notes!,
+                          txn.notes,
                           style: GoogleFonts.montserrat(
                             fontSize: 12,
                             color: Colors.grey[700],
