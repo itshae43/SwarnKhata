@@ -13,8 +13,9 @@ class PartyService {
   }
 
   // ─── CREATE PARTY ──────────────────────────────────────────────────
-  Future<void> createParty(PartyModel party) async {
-    await _partiesRef(party.userId).add(party.toMap());
+  Future<String> createParty(PartyModel party) async {
+    final docRef = await _partiesRef(party.userId).add(party.toMap());
+    return docRef.id;
   }
 
   // ─── GET PARTIES STREAM ─────────────────────────────────────────────

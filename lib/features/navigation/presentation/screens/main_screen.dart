@@ -48,19 +48,6 @@ class MainScreen extends ConsumerWidget {
         },
         child: screens[currentIndex],
       ),
-      floatingActionButton: (currentIndex == 0 || currentIndex == 3)
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddPartyScreen()),
-                );
-              },
-              backgroundColor: const Color(0xFF8A7311),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.add, color: Colors.white, size: 32),
-            )
-          : null,
       bottomNavigationBar: const CustomBottomNavBar(),
     );
   }

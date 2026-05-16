@@ -47,7 +47,7 @@ class PartyNotifier extends Notifier<PartyState> {
 
   PartyService get _partyService => ref.read(partyServiceProvider);
 
-  Future<bool> createParty({
+  Future<String?> createParty({
     required String name,
     required String type,
     required String phone,
@@ -60,7 +60,7 @@ class PartyNotifier extends Notifier<PartyState> {
     final user = ref.read(currentUserProvider).value;
     if (user == null) {
       state = state.copyWith(error: 'User not authenticated');
-      return false;
+      return null;
     }
 
     state = state.copyWith(isLoading: true, clearError: true);
@@ -82,12 +82,12 @@ class PartyNotifier extends Notifier<PartyState> {
         updatedAt: now,
       );
 
-      await _partyService.createParty(party);
+      final newId = await _partyService.createParty(party);
       state = state.copyWith(isLoading: false, isSuccess: true);
-      return true;
+      return newId;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
+      return null;
     }
   }
 

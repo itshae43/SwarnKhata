@@ -479,7 +479,7 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
                         final double gold = _transactionType == 'IN' ? goldValue : -goldValue;
                         final double diamond = _transactionType == 'IN' ? diamondValue : -diamondValue;
 
-                        final success = await ref.read(partyNotifierProvider.notifier).createParty(
+                        final newPartyId = await ref.read(partyNotifierProvider.notifier).createParty(
                           name: _nameController.text.trim(),
                           type: _transactionType == 'IN' ? 'Customer' : 'Vendor',
                           phone: _phoneController.text.trim(),
@@ -490,11 +490,11 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
                           diamondBalance: diamond,
                         );
 
-                        if (success && mounted) {
+                        if (newPartyId != null && mounted) {
                           setState(() => _isSaved = true);
                           await Future.delayed(const Duration(milliseconds: 800));
                           if (mounted) {
-                            Navigator.pop(context);
+                            Navigator.pop(context, newPartyId);
                           }
                         } else if (partyState.error != null && mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

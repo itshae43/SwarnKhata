@@ -8,6 +8,7 @@ import 'package:swarn_khata/core/models/transaction_model.dart';
 import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
 import 'package:swarn_khata/features/parties/providers/party_providers.dart';
 import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
+import 'package:swarn_khata/features/parties/presentation/screens/add_party_screen.dart';
 
 class EntriesScreen extends ConsumerStatefulWidget {
   const EntriesScreen({super.key});
@@ -31,6 +32,7 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
   final TextEditingController _piecesController = TextEditingController();
   final FocusNode _partyFocusNode = FocusNode();
   PartyModel? _selectedParty;
+  String? _pendingPartyId;
 
   @override
   void dispose() {
@@ -48,8 +50,23 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
   @override
   Widget build(BuildContext context) {
     // Watch to keep stream alive so autocomplete can read synchronously
-    ref.watch(partiesStreamProvider);
+    final parties = ref.watch(partiesStreamProvider).value ?? [];
     
+    if (_pendingPartyId != null && parties.isNotEmpty) {
+      try {
+        final party = parties.firstWhere((p) => p.id == _pendingPartyId);
+        _pendingPartyId = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _selectedParty = party;
+              _partyController.text = party.name;
+            });
+          }
+        });
+      } catch (_) {}
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDFBF7),
       body: SafeArea(
@@ -154,9 +171,47 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
               const SizedBox(height: 24),
 
               // Party / Customer
-              const Text(
-                'Customer',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Party / Customer',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                  ),
+                  InkWell(
+                    onTap: () async {
+                      final newId = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddPartyScreen()),
+                      );
+                      if (newId != null && newId is String) {
+                        setState(() => _pendingPartyId = newId);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFDCAE3D)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.add, size: 16, color: Color(0xFF8A7311)),
+                          SizedBox(width: 4),
+                          Text(
+                            'Add New',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF8A7311),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               _buildPartyAutocomplete(),
