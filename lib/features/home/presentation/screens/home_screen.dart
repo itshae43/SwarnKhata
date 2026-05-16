@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/core/models/user_model.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
+import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
+import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
+import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -25,39 +29,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final String todayIn = '+₹45,000';
   final String todayOut = '-₹12,000';
 
-  // Recent Transactions List
-  final List<Map<String, dynamic>> recentTransactions = [
-    {
-      'icon': Icons.storefront_outlined,
-      'iconBgColor': const Color(0xFFE8C73D),
-      'iconColor': const Color(0xFF4A3E1F),
-      'title': 'Gaurav Jewellers',
-      'subtitle': 'Metal Deposit • 10:30 AM',
-      'amount': '+ 50g Gold',
-      'amountColor': const Color(0xFF8A7311),
-      'lineColor': const Color(0xFF8A7311),
-    },
-    {
-      'icon': Icons.point_of_sale_outlined,
-      'iconBgColor': const Color(0xFFEBEBEB),
-      'iconColor': const Color(0xFF555555),
-      'title': 'Cash Sale',
-      'subtitle': 'Retail • 09:15 AM',
-      'amount': '+ ₹15,000',
-      'amountColor': const Color(0xFF8A7311),
-      'lineColor': const Color(0xFF8A7311),
-    },
-    {
-      'icon': Icons.local_shipping_outlined,
-      'iconBgColor': const Color(0xFFEBEBEB),
-      'iconColor': const Color(0xFF555555),
-      'title': 'Supplier Payment',
-      'subtitle': 'Bank Transfer • Yesterday',
-      'amount': '- ₹2,000',
-      'amountColor': const Color(0xFFC62828),
-      'lineColor': const Color(0xFFC62828),
-    },
-  ];
+
 
   @override
   Widget build(BuildContext context) {
@@ -333,152 +305,216 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildRecentTransactions() {
+    final transactionsAsync = ref.watch(transactionsStreamProvider);
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Recent Transactions",
+              "Recent Activity",
               style: GoogleFonts.montserrat(
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: const Color(0xFF4A3E1F),
               ),
             ),
-            Text(
-              "View All",
-              style: GoogleFonts.montserrat(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF8A7311),
+            TextButton(
+              onPressed: () {
+                ref.read(navigationProvider.notifier).setIndex(2); // Redirect to Ledger
+              },
+              child: Text(
+                "View All",
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF8A7311),
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.15)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            // Generating transactions dynamically from the list
-            children: List.generate(recentTransactions.length, (index) {
-              final tx = recentTransactions[index];
-              return Column(
-                children: [
-                  _buildTransactionItem(
-                    icon: tx['icon'] as IconData,
-                    iconBgColor: tx['iconBgColor'] as Color,
-                    iconColor: tx['iconColor'] as Color,
-                    title: tx['title'] as String,
-                    subtitle: tx['subtitle'] as String,
-                    amount: tx['amount'] as String,
-                    amountColor: tx['amountColor'] as Color,
-                    lineColor: tx['lineColor'] as Color,
-                    isFirst: index == 0,
-                    isLast: index == recentTransactions.length - 1,
+        transactionsAsync.when(
+          data: (transactions) {
+            if (transactions.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                ),
+                child: Center(
+                  child: Text(
+                    'No recent transactions',
+                    style: GoogleFonts.montserrat(color: Colors.grey),
                   ),
-                  if (index != recentTransactions.length - 1)
-                    Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
-                ],
+                ),
               );
-            }),
-          ),
-        ),
-      ],
-    );
-  }
+            }
 
-  Widget _buildTransactionItem({
-    required IconData icon,
-    required Color iconBgColor,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required String amount,
-    required Color amountColor,
-    required Color lineColor,
-    bool isFirst = false,
-    bool isLast = false,
-  }) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: lineColor,
-              borderRadius: BorderRadius.only(
-                topLeft: isFirst ? const Radius.circular(16) : Radius.zero,
-                bottomLeft: isLast ? const Radius.circular(16) : Radius.zero,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: iconBgColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, color: iconColor, size: 24),
+            final recent = transactions.take(4).toList();
+
+            return Column(
+              children: recent.map((activity) {
+                final isCredit = activity.type == TransactionType.receipt || activity.type == TransactionType.metalIn;
+                final color = isCredit ? const Color(0xFF2852C6) : const Color(0xFFC62828);
+                final typeLabel = isCredit ? 'In' : 'Out';
+                
+                String topRightLabel = '';
+                String middleRightLabel = '';
+                
+                if (activity.metalType.isEmpty) {
+                  topRightLabel = activity.paymentMode.name.toUpperCase();
+                  middleRightLabel = '₹ ${NumberFormat.decimalPattern('en_IN').format(activity.cashAmount)}';
+                } else if (activity.metalType == 'gold') {
+                  topRightLabel = 'Gold (${activity.metalPurity}%)';
+                  middleRightLabel = '${activity.metalWeight}g';
+                } else if (activity.metalType == 'diamond') {
+                  topRightLabel = 'Diamond(${activity.metalWeight}ct)';
+                  middleRightLabel = activity.metalPurity;
+                }
+
+                final initial = activity.partyName.isNotEmpty ? activity.partyName[0].toUpperCase() : '?';
+                final dateStr = DateFormat('dd MMM yyyy').format(activity.date);
+                final timeStr = DateFormat('hh:mm a').format(activity.date);
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          title,
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                        Container(
+                          width: 4,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              bottomLeft: Radius.circular(16),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: GoogleFonts.montserrat(
-                            fontSize: 13,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF0EBE1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    initial,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF6B5800),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        activity.partyName,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        dateStr,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Text(
+                                        timeStr,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      topRightLabel,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      middleRightLabel,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      typeLabel,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: color,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    amount,
-                    style: GoogleFonts.montserrat(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: amountColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error loading transactions')),
+        ),
+      ],
     );
   }
 }
-
