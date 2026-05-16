@@ -8,7 +8,7 @@ import 'package:swarn_khata/core/models/transaction_model.dart';
 import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
 import 'package:swarn_khata/features/parties/providers/party_providers.dart';
 import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
-import 'package:swarn_khata/features/parties/presentation/screens/add_party_screen.dart';
+import 'package:swarn_khata/features/parties/presentation/widgets/quick_add_party_bottom_sheet.dart';
 
 class EntriesScreen extends ConsumerStatefulWidget {
   const EntriesScreen({super.key});
@@ -180,9 +180,11 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                   ),
                   InkWell(
                     onTap: () async {
-                      final newId = await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AddPartyScreen()),
+                      final newId = await showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const QuickAddPartyBottomSheet(),
                       );
                       if (newId != null && newId is String) {
                         setState(() => _pendingPartyId = newId);
