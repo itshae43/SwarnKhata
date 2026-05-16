@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum TransactionType { sale, purchase, payment, receipt, metalIn, metalOut, return_ }
 
-enum PaymentMode { cash, online, metal, mixed }
+enum PaymentMode { cash, online, metal, mixed, upi, rtgs }
 
 class TransactionModel {
   final String id;

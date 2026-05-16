@@ -587,7 +587,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         PaymentMode pMode = PaymentMode.cash;
                         if (_category == 'Money') {
                           if (_paymentMode == 'Cash') pMode = PaymentMode.cash;
-                          else pMode = PaymentMode.online; // UPI/RTGS
+                          else if (_paymentMode == 'UPI') pMode = PaymentMode.upi;
+                          else if (_paymentMode == 'RTGS') pMode = PaymentMode.rtgs;
+                          else pMode = PaymentMode.online; 
                         } else {
                           pMode = PaymentMode.metal;
                         }
@@ -600,7 +602,7 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         
                         String metalP = '';
                         if (_category == 'Gold') metalP = _purityController.text;
-                        if (_category == 'Diamond') metalP = '${_piecesController.text} pcs';
+                        if (_category == 'Diamond') metalP = '${_piecesController.text} p';
 
                         final date = DateTime(
                           _selectedDate.year, _selectedDate.month, _selectedDate.day,

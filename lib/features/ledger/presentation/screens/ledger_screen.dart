@@ -267,24 +267,23 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             final color = isCredit ? const Color(0xFF2852C6) : const Color(0xFFC62828);
             final typeLabel = isCredit ? 'In' : 'Out';
             
-            String amountStr = '';
+            String topRightLabel = '';
+            String middleRightLabel = '';
+            
             if (activity.metalType.isEmpty) {
-              amountStr = '₹ ${activity.cashAmount.toStringAsFixed(2)}';
-              if (activity.paymentMode != PaymentMode.cash) {
-                amountStr += ' (${activity.paymentMode == PaymentMode.online ? "UPI/RTGS" : "Mixed"})';
-              } else {
-                amountStr += ' (Cash)';
-              }
+              topRightLabel = activity.paymentMode.name.toUpperCase();
+              middleRightLabel = '₹ ${NumberFormat.decimalPattern('en_IN').format(activity.cashAmount)}';
             } else if (activity.metalType == 'gold') {
-              amountStr = '${activity.metalWeight}g Gold';
-              if (activity.metalPurity.isNotEmpty) amountStr += ' (${activity.metalPurity}%)';
+              topRightLabel = 'Gold (${activity.metalPurity}%)';
+              middleRightLabel = '${activity.metalWeight}g';
             } else if (activity.metalType == 'diamond') {
-              amountStr = '${activity.metalWeight}ct Diamond';
-              if (activity.metalPurity.isNotEmpty) amountStr += ' (${activity.metalPurity})';
+              topRightLabel = 'Diamond(${activity.metalWeight}ct)';
+              middleRightLabel = activity.metalPurity;
             }
 
             final initial = activity.partyName.isNotEmpty ? activity.partyName[0].toUpperCase() : '?';
-            final timeStr = DateFormat('dd MMM yyyy • hh:mm a').format(activity.date);
+            final dateStr = DateFormat('dd MMM yyyy').format(activity.date);
+            final timeStr = DateFormat('hh:mm a').format(activity.date);
 
             return GestureDetector(
               onTap: () {
@@ -315,10 +314,9 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withOpacity(0.15)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
+                      color: Colors.black.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -329,7 +327,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Container(
-                        width: 5,
+                        width: 4,
                         decoration: BoxDecoration(
                           color: color,
                           borderRadius: const BorderRadius.only(
@@ -344,8 +342,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                           child: Row(
                             children: [
                               Container(
-                                width: 48,
-                                height: 48,
+                                width: 54,
+                                height: 54,
                                 decoration: const BoxDecoration(
                                   color: Color(0xFFF0EBE1),
                                   shape: BoxShape.circle,
@@ -354,7 +352,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                                 child: Text(
                                   initial,
                                   style: GoogleFonts.montserrat(
-                                    fontSize: 20,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                     color: const Color(0xFF6B5800),
                                   ),
@@ -369,33 +367,28 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                                     Text(
                                       activity.partyName,
                                       style: GoogleFonts.montserrat(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      timeStr,
+                                      dateStr,
                                       style: GoogleFonts.montserrat(
-                                        fontSize: 12,
+                                        fontSize: 13,
                                         color: Colors.grey[600],
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    if (activity.notes.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        activity.notes,
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 11,
-                                          color: Colors.grey[500],
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                    Text(
+                                      timeStr,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 13,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                    ],
+                                    ),
                                   ],
                                 ),
                               ),
@@ -404,14 +397,23 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    amountStr,
+                                    topRightLabel,
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 15,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: color,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    middleRightLabel,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: color,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   Text(
                                     typeLabel,
                                     style: GoogleFonts.montserrat(
