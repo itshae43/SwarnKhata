@@ -53,6 +53,7 @@ class TransactionNotifier extends Notifier<TransactionState> {
   Future<bool> createTransaction({
     required String partyId,
     required String partyName,
+    required String partyPhone,
     required TransactionType type,
     required PaymentMode paymentMode,
     required double cashAmount,
@@ -76,6 +77,7 @@ class TransactionNotifier extends Notifier<TransactionState> {
         userId: user.uid,
         partyId: partyId,
         partyName: partyName,
+        partyPhone: partyPhone,
         type: type,
         paymentMode: paymentMode,
         cashAmount: cashAmount,

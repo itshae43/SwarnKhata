@@ -11,6 +11,7 @@ class TransactionService {
       userId: transaction.userId,
       partyId: transaction.partyId,
       partyName: transaction.partyName,
+      partyPhone: transaction.partyPhone,
       type: transaction.type,
       paymentMode: transaction.paymentMode,
       cashAmount: transaction.cashAmount,

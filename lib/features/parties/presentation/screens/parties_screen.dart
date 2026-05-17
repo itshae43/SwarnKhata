@@ -340,6 +340,7 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
       totalGoldDue: totalGoldDue,
       goldDueLabel: goldDueLabel,
       isGoldYouOwe: isGoldYouOwe,
+      phone: party.phone,
       transactions: transactions,
     );
   }

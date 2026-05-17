@@ -612,6 +612,7 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         final success = await ref.read(transactionNotifierProvider.notifier).createTransaction(
                           partyId: _selectedParty!.id,
                           partyName: _selectedParty!.name,
+                          partyPhone: _selectedParty!.phone,
                           type: tType,
                           paymentMode: pMode,
                           cashAmount: cashAmt,

@@ -303,6 +303,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                         totalGoldDue: '0g',
                         goldDueLabel: 'Settled',
                         isGoldYouOwe: true,
+                        phone: activity.partyPhone,
                         transactions: [], // Will be handled dynamically in PartyDetailScreen
                       ),
                     ),
@@ -361,6 +362,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [

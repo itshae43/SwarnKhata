@@ -9,44 +9,63 @@ import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
-import '../../../parties/presentation/screens/add_party_screen.dart';
-
-class MainScreen extends ConsumerWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    );
+    _fadeController.forward();
+  }
+
+  @override
+  void didUpdateWidget(MainScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Restart animation on tab change
+    _fadeController.forward(from: 0.0);
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
 
-    final screens = [
-      const HomeScreen(),
-      const EntriesScreen(),
-      const LedgerScreen(),
-      const RemindersScreen(),
-      const SettingsScreen(),
-    ];
-
+    // Using IndexedStack for perfect stability and state preservation
     return Scaffold(
-      appBar: currentIndex == 4
-          ? AppBar(
-              title: Image.asset(
-                'assets/images/logo.png',
-                height: 32,
-              ),
-              centerTitle: true,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-            )
-          : null,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-        child: screens[currentIndex],
+      backgroundColor: const Color(0xFFFDFBF7),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: IndexedStack(
+          index: currentIndex,
+          children: const [
+            HomeScreen(),
+            EntriesScreen(),
+            LedgerScreen(),
+            RemindersScreen(),
+            SettingsScreen(),
+          ],
+        ),
       ),
       bottomNavigationBar: const CustomBottomNavBar(),
     );

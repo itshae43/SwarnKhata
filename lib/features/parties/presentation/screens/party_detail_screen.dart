@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/core/models/transaction_model.dart';
 import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
+import 'package:swarn_khata/features/reminders/providers/reminder_providers.dart';
+import 'package:swarn_khata/core/models/reminder_model.dart';
+import 'package:swarn_khata/core/utils/communication_utils.dart';
 import 'package:intl/intl.dart';
 
 // ──────────────────────────── DATA MODELS ────────────────────────────
@@ -41,6 +44,7 @@ class PartyDetail {
   final String totalGoldDue;
   final String goldDueLabel;
   final bool isGoldYouOwe;
+  final String phone;
   final List<PartyTransaction> transactions;
 
   const PartyDetail({
@@ -55,6 +59,7 @@ class PartyDetail {
     required this.totalGoldDue,
     required this.goldDueLabel,
     required this.isGoldYouOwe,
+    required this.phone,
     required this.transactions,
   });
 }
@@ -177,7 +182,7 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${widget.party.type} • ${widget.party.location}',
+                  '${widget.party.type} • ${widget.party.location}${widget.party.phone.isNotEmpty ? ' • ${widget.party.phone}' : ''}',
                   style: GoogleFonts.montserrat(
                     fontSize: 13,
                     color: Colors.grey[600],
@@ -701,7 +706,6 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
                         ),
                       ],
                       const SizedBox(height: 24),
-                      // Save button
                       Material(
                         color: const Color(0xFF4A3E1F),
                         borderRadius: BorderRadius.circular(12),
@@ -710,9 +714,47 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
                           onTap: _isSavingReminder
                               ? null
                               : () async {
+                                  if (_reminderMsgController.text.trim().isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Please enter a reminder message')),
+                                    );
+                                    return;
+                                  }
+
+                                  DateTime reminderDate;
+                                  if (_selectedReminderTime == 'Tomorrow') {
+                                    reminderDate = DateTime.now().add(const Duration(days: 1));
+                                  } else if (_selectedReminderTime == 'In 2 days') {
+                                    reminderDate = DateTime.now().add(const Duration(days: 2));
+                                  } else if (_selectedReminderTime == 'Next Week') {
+                                    reminderDate = DateTime.now().add(const Duration(days: 7));
+                                  } else {
+                                    if (_customDate == null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Please select a custom date')),
+                                      );
+                                      return;
+                                    }
+                                    reminderDate = DateTime(
+                                      _customDate!.year,
+                                      _customDate!.month,
+                                      _customDate!.day,
+                                      _customTime?.hour ?? 9,
+                                      _customTime?.minute ?? 0,
+                                    );
+                                  }
+
                                   setState(() => _isSavingReminder = true);
-                                  // Simulate network save
-                                  await Future.delayed(const Duration(milliseconds: 800));
+                                  
+                                  await ref.read(reminderNotifierProvider.notifier).createReminder(
+                                    partyId: widget.party.id,
+                                    partyName: widget.party.name,
+                                    partyPhone: widget.party.phone,
+                                    title: 'Reminder', // Default title
+                                    note: _reminderMsgController.text.trim(),
+                                    date: reminderDate,
+                                  );
+
                                   if (mounted) {
                                     setState(() {
                                       _isSavingReminder = false;
@@ -805,40 +847,48 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Mock reminder items
-          _buildPreviousReminderCard(
-            status: 'Pending',
-            date: 'Tomorrow, 10:00 AM',
-            title: 'Call after 2 days',
-            note: 'Discuss the pending payment for invoice #INV-2023-089. They promised to clear half the amount.',
-            isPending: true,
-          ),
-          _buildPreviousReminderCard(
-            status: 'Pending',
-            date: 'Oct 25, 2023',
-            title: 'Share new Diwali collection',
-            note: 'Send PDF catalog of the new antique gold temple jewellery collection.',
-            isPending: true,
-          ),
-          _buildPreviousReminderCard(
-            status: 'Completed',
-            date: 'Oct 10, 2023',
-            title: 'Collect silver scrap',
-            note: 'Picked up 2kg silver scrap for melting.',
-            isPending: false,
+          // Real reminder items
+          Consumer(
+            builder: (context, ref, child) {
+              final remindersAsync = ref.watch(partyRemindersStreamProvider(widget.party.id));
+              
+              return remindersAsync.when(
+                data: (reminders) {
+                  if (reminders.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          'No previous reminders',
+                          style: GoogleFonts.montserrat(color: Colors.grey),
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  // Sort: Newest created or imminent first as requested
+                  final sorted = reminders.toList()
+                    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                  return Column(
+                    children: sorted.map((r) => _buildPreviousReminderCard(r)).toList(),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPreviousReminderCard({
-    required String status,
-    required String date,
-    required String title,
-    required String note,
-    required bool isPending,
-  }) {
+  Widget _buildPreviousReminderCard(ReminderModel reminder) {
+    final isPending = reminder.status != ReminderStatus.completed;
+    final statusText = isPending ? 'Pending' : 'Completed';
+    final dateStr = DateFormat('dd MMM yyyy • hh:mm a').format(reminder.date);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -886,7 +936,7 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
                           const Icon(Icons.check, size: 12, color: Colors.grey),
                         const SizedBox(width: 4),
                         Text(
-                          status,
+                          statusText,
                           style: GoogleFonts.montserrat(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -897,10 +947,32 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.phone_android, size: 12, color: Colors.grey[700]),
+                        const SizedBox(width: 4),
+                        Text(
+                          reminder.partyPhone.isNotEmpty ? reminder.partyPhone : 'No Phone',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Text(
-                    date,
+                    dateStr,
                     style: GoogleFonts.montserrat(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
@@ -909,12 +981,25 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
                   ),
                 ],
               ),
-              Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    ref.read(reminderNotifierProvider.notifier).deleteReminder(reminder.id);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete'),
+                  ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            title,
+            reminder.title,
             style: GoogleFonts.montserrat(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -923,7 +1008,7 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            note,
+            reminder.note,
             style: GoogleFonts.montserrat(
               fontSize: 13,
               color: Colors.grey[700],
@@ -934,24 +1019,31 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.check, size: 14),
-                  label: const Text('Mark Done'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF4A3E1F),
-                    side: const BorderSide(color: Color(0xFFE0D8CA)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
+                _buildActionIcon(
+                  icon: Icons.call,
+                  color: const Color(0xFF2E7D32),
+                  onTap: () => CommunicationUtils.makeCall(widget.party.phone),
+                  label: 'Call',
                 ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.edit_outlined, size: 14),
-                  label: const Text('Edit'),
+                const SizedBox(width: 12),
+                _buildActionIcon(
+                  icon: Icons.message_outlined,
+                  color: const Color(0xFF0288D1),
+                  onTap: () => CommunicationUtils.sendSMS(widget.party.phone),
+                  label: 'SMS',
+                ),
+                const SizedBox(width: 12),
+                _buildActionIcon(
+                  icon: Icons.chat_outlined,
+                  color: const Color(0xFF25D366),
+                  onTap: () => CommunicationUtils.launchWhatsApp(widget.party.phone, reminder.note),
+                  label: 'WA',
+                ),
+                const Spacer(),
+                OutlinedButton(
+                  onPressed: () {
+                    _showEditReminderDialog(reminder);
+                  },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey[700],
                     side: const BorderSide(color: Color(0xFFE0D8CA)),
@@ -960,10 +1052,111 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
+                  child: const Text('Edit'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    ref.read(reminderNotifierProvider.notifier).markAsDone(reminder.id);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A3E1F),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: const Icon(Icons.check, size: 18, color: Colors.white),
                 ),
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionIcon({required IconData icon, required Color color, required VoidCallback onTap, required String label}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: GoogleFonts.montserrat(
+            fontSize: 8,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showEditReminderDialog(ReminderModel reminder) {
+    final noteController = TextEditingController(text: reminder.note);
+    DateTime selectedDate = reminder.date;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Reminder', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: noteController,
+              decoration: const InputDecoration(labelText: 'Note'),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              title: Text('Date: ${DateFormat('dd MMM yyyy • hh:mm a').format(selectedDate)}'),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: selectedDate,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+                if (date != null) {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(selectedDate),
+                  );
+                  if (time != null) {
+                    selectedDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(reminderNotifierProvider.notifier).updateReminder(
+                reminder.copyWith(note: noteController.text, date: selectedDate),
+              );
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A3E1F)),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );

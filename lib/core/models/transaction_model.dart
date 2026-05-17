@@ -9,6 +9,7 @@ class TransactionModel {
   final String userId;
   final String partyId;
   final String partyName;
+  final String partyPhone;
   final TransactionType type;
   final PaymentMode paymentMode;
   final double cashAmount;
@@ -24,6 +25,7 @@ class TransactionModel {
     required this.userId,
     required this.partyId,
     required this.partyName,
+    required this.partyPhone,
     required this.type,
     required this.paymentMode,
     required this.cashAmount,
@@ -41,6 +43,7 @@ class TransactionModel {
       userId: map['userId'] as String? ?? '',
       partyId: map['partyId'] as String? ?? '',
       partyName: map['partyName'] as String? ?? '',
+      partyPhone: map['partyPhone'] as String? ?? '',
       type: TransactionType.values.firstWhere(
         (e) => e.name == map['type'],
         orElse: () => TransactionType.sale,
@@ -64,6 +67,7 @@ class TransactionModel {
       'userId': userId,
       'partyId': partyId,
       'partyName': partyName,
+      'partyPhone': partyPhone,
       'type': type.name,
       'paymentMode': paymentMode.name,
       'cashAmount': cashAmount,
