@@ -8,6 +8,7 @@ import '../../../reminders/presentation/screens/reminders_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
+import '../widgets/collapsible_sidebar.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -19,6 +20,7 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  bool _isSidebarCollapsed = false;
 
   @override
   void initState() {
@@ -50,24 +52,48 @@ class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
+    final isTablet = MediaQuery.of(context).size.width >= 600;
 
-    // Using IndexedStack for perfect stability and state preservation
+    Widget bodyContent = FadeTransition(
+      opacity: _fadeAnimation,
+      child: IndexedStack(
+        index: currentIndex,
+        children: const [
+          HomeScreen(),
+          EntriesScreen(),
+          LedgerScreen(),
+          RemindersScreen(),
+          SettingsScreen(),
+        ],
+      ),
+    );
+
+    if (isTablet) {
+      bodyContent = Row(
+        children: [
+          CollapsibleSidebar(
+            currentIndex: currentIndex,
+            onTap: (index) {
+              ref.read(navigationProvider.notifier).setIndex(index);
+            },
+            isCollapsed: _isSidebarCollapsed,
+            onToggleCollapse: () {
+              setState(() {
+                _isSidebarCollapsed = !_isSidebarCollapsed;
+              });
+            },
+          ),
+          Expanded(
+            child: bodyContent,
+          ),
+        ],
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDFBF7),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: IndexedStack(
-          index: currentIndex,
-          children: const [
-            HomeScreen(),
-            EntriesScreen(),
-            LedgerScreen(),
-            RemindersScreen(),
-            SettingsScreen(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: const CustomBottomNavBar(),
+      body: bodyContent,
+      bottomNavigationBar: isTablet ? null : const CustomBottomNavBar(),
     );
   }
 }
