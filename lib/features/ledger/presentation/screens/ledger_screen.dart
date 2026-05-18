@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:swarn_khata/core/models/transaction_model.dart';
-import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
 import 'package:intl/intl.dart';
 
+import 'package:swarn_khata/core/models/party_model.dart';
+import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:swarn_khata/features/parties/providers/party_providers.dart';
+import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
 import '../../../parties/presentation/screens/party_detail_screen.dart';
 
 class LedgerScreen extends ConsumerStatefulWidget {
@@ -18,60 +19,162 @@ class LedgerScreen extends ConsumerStatefulWidget {
 class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
+  
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
-
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final partiesAsync = ref.watch(partiesStreamProvider);
+    final transactionsAsync = ref.watch(transactionsStreamProvider);
+
     return Container(
       color: const Color(0xFFFDFBF7),
       child: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSearchBar(),
-              const SizedBox(height: 16),
-              _buildFilterChips(),
-              const SizedBox(height: 24),
-              _buildSummaryCards(),
-              const SizedBox(height: 32),
-              _buildRecentActivityHeader(),
-              const SizedBox(height: 16),
-              _buildRecentActivityList(),
-              const SizedBox(height: 80), // Padding for bottom nav
-            ],
-          ),
+        child: partiesAsync.when(
+          data: (parties) {
+            final transactions = transactionsAsync.value ?? [];
+            
+            // Apply Search Query
+            final query = _searchQuery.toLowerCase().trim();
+            
+            // Sort parties alphabetically by name (A to Z)
+            final List<PartyModel> sortedParties = List.from(parties)
+              ..sort((a, b) => a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase()));
+
+            // Filter by search query
+            List<PartyModel> filteredParties = sortedParties.where((p) {
+              if (query.isEmpty) return true;
+              return p.name.toLowerCase().contains(query) ||
+                  p.phone.toLowerCase().contains(query);
+            }).toList();
+
+            // Filter by selected category balance
+            if (_selectedFilter == 'Money') {
+              filteredParties = filteredParties.where((p) => p.cashBalance != 0).toList();
+            } else if (_selectedFilter == 'Gold') {
+              filteredParties = filteredParties.where((p) => p.goldBalanceGrams != 0).toList();
+            } else if (_selectedFilter == 'Diamond') {
+              filteredParties = filteredParties.where((p) => p.diamondBalanceCarats != 0).toList();
+            }
+
+            // Calculate dynamic summary values from all parties (reflecting total outstanding positions)
+            double totalCashReceivable = 0;
+            double totalGoldReceivable = 0;
+            double totalCashPayable = 0;
+            double totalGoldPayable = 0;
+
+            for (final p in parties) {
+              if (p.cashBalance > 0) {
+                totalCashReceivable += p.cashBalance;
+              } else if (p.cashBalance < 0) {
+                totalCashPayable += p.cashBalance.abs();
+              }
+
+              if (p.goldBalanceGrams > 0) {
+                totalGoldReceivable += p.goldBalanceGrams;
+              } else if (p.goldBalanceGrams < 0) {
+                totalGoldPayable += p.goldBalanceGrams.abs();
+              }
+            }
+
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 32.0 : 16.0,
+                vertical: isTablet ? 24.0 : 16.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchBar(isTablet),
+                  SizedBox(height: isTablet ? 24 : 16),
+                  _buildFilterChips(isTablet),
+                  SizedBox(height: isTablet ? 32 : 24),
+                  _buildDynamicSummaryCards(
+                    isTablet: isTablet,
+                    totalCashReceivable: totalCashReceivable,
+                    totalGoldReceivable: totalGoldReceivable,
+                    totalCashPayable: totalCashPayable,
+                    totalGoldPayable: totalGoldPayable,
+                  ),
+                  SizedBox(height: isTablet ? 48 : 32),
+                  _buildRecentActivityHeader(isTablet),
+                  SizedBox(height: isTablet ? 24 : 16),
+                  _buildPartiesList(filteredParties, isTablet, transactions),
+                  const SizedBox(height: 80), // Padding for bottom nav
+                ],
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error loading ledger: $e')),
         ),
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(bool isTablet) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isTablet ? 32 : 24),
         border: Border.all(color: Colors.grey.withOpacity(0.3)),
       ),
       child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+          });
+        },
+        style: GoogleFonts.montserrat(
+          fontSize: isTablet ? 18 : 15,
+        ),
         decoration: InputDecoration(
-          hintText: 'Search parties or transactions...',
+          hintText: 'Search customers by name or phone...',
           hintStyle: GoogleFonts.montserrat(
             color: Colors.grey[500],
-            fontSize: 15,
+            fontSize: isTablet ? 18 : 15,
           ),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+          prefixIcon: Padding(
+            padding: EdgeInsets.symmetric(horizontal: isTablet ? 16 : 12),
+            child: Icon(Icons.search, color: Colors.grey[600], size: isTablet ? 28 : 24),
+          ),
+          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    });
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(right: isTablet ? 16 : 12),
+                    child: Icon(Icons.clear, color: Colors.grey[600], size: isTablet ? 24 : 20),
+                  ),
+                )
+              : null,
+          suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 24 : 20,
+            vertical: isTablet ? 18 : 14,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(bool isTablet) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
@@ -79,7 +182,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         children: _filters.map((filter) {
           final isSelected = _selectedFilter == filter;
           return Padding(
-            padding: const EdgeInsets.only(right: 12.0),
+            padding: EdgeInsets.only(right: isTablet ? 16.0 : 12.0),
             child: GestureDetector(
               onTap: () {
                 setState(() {
@@ -87,10 +190,13 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 28 : 20,
+                  vertical: isTablet ? 12 : 8,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFF6B5800) : const Color(0xFFF5EFE6),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(isTablet ? 24 : 20),
                   border: Border.all(
                     color: isSelected ? const Color(0xFF6B5800) : Colors.grey.withOpacity(0.2),
                   ),
@@ -100,7 +206,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                   style: GoogleFonts.montserrat(
                     color: isSelected ? Colors.white : Colors.black87,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    fontSize: 14,
+                    fontSize: isTablet ? 18 : 14,
                   ),
                 ),
               ),
@@ -111,28 +217,43 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     );
   }
 
-  Widget _buildSummaryCards() {
+  Widget _buildDynamicSummaryCards({
+    required bool isTablet,
+    required double totalCashReceivable,
+    required double totalGoldReceivable,
+    required double totalCashPayable,
+    required double totalGoldPayable,
+  }) {
+    final formatCurrency = NumberFormat.decimalPattern('en_IN');
+    final cashReceivableStr = '₹ ${formatCurrency.format(totalCashReceivable)}';
+    final goldReceivableStr = '+ ${totalGoldReceivable.toStringAsFixed(3)}g Fine Gold';
+
+    final cashPayableStr = '₹ ${formatCurrency.format(totalCashPayable)}';
+    final goldPayableStr = '- ${totalGoldPayable.toStringAsFixed(3)}g Fine Gold';
+
     return Row(
       children: [
         Expanded(
           child: _buildSummaryCard(
+            isTablet: isTablet,
             title: 'Total\nReceivables',
-            amount: '₹ 12,45,000',
-            subtitle: '+ 145g Fine Gold',
+            amount: cashReceivableStr,
+            subtitle: goldReceivableStr,
             icon: Icons.arrow_downward,
-            iconColor: const Color(0xFFC62828),
-            circleColor: const Color(0xFFFFF0F0),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildSummaryCard(
-            title: 'Total Payables\n',
-            amount: '₹ 8,30,000',
-            subtitle: '- 50g Fine Gold',
-            icon: Icons.arrow_upward,
             iconColor: const Color(0xFF2852C6),
             circleColor: const Color(0xFFF0F4FF),
+          ),
+        ),
+        SizedBox(width: isTablet ? 20 : 12),
+        Expanded(
+          child: _buildSummaryCard(
+            isTablet: isTablet,
+            title: 'Total Payables\n',
+            amount: cashPayableStr,
+            subtitle: goldPayableStr,
+            icon: Icons.arrow_upward,
+            iconColor: const Color(0xFFC62828),
+            circleColor: const Color(0xFFFFF0F0),
           ),
         ),
       ],
@@ -140,6 +261,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   }
 
   Widget _buildSummaryCard({
+    required bool isTablet,
     required String title,
     required String amount,
     required String subtitle,
@@ -148,10 +270,10 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     required Color circleColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isTablet ? 24 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
         border: Border.all(color: Colors.grey.withOpacity(0.15)),
         boxShadow: [
           BoxShadow(
@@ -165,11 +287,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            right: -16,
-            top: -16,
+            right: isTablet ? -20 : -16,
+            top: isTablet ? -20 : -16,
             child: Container(
-              width: 80,
-              height: 80,
+              width: isTablet ? 100 : 80,
+              height: isTablet ? 100 : 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: circleColor,
@@ -186,23 +308,23 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                   Text(
                     title,
                     style: GoogleFonts.montserrat(
-                      fontSize: 13,
+                      fontSize: isTablet ? 17 : 13,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey[800],
                       height: 1.2,
                     ),
                   ),
                   Transform.rotate(
-                    angle: icon == Icons.arrow_downward ? 0.8 : 0.8, // Adjust angle to match diagonal arrows
-                    child: Icon(icon, color: iconColor, size: 20),
+                    angle: 0.8,
+                    child: Icon(icon, color: iconColor, size: isTablet ? 26 : 20),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isTablet ? 20 : 16),
               Text(
                 amount,
                 style: GoogleFonts.montserrat(
-                  fontSize: 20,
+                  fontSize: isTablet ? 26 : 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                   letterSpacing: -0.5,
@@ -212,9 +334,9 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
               Text(
                 subtitle,
                 style: GoogleFonts.montserrat(
-                  fontSize: 12,
+                  fontSize: isTablet ? 16 : 12,
                   color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -224,14 +346,14 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     );
   }
 
-  Widget _buildRecentActivityHeader() {
+  Widget _buildRecentActivityHeader(bool isTablet) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "All Activity",
+          "Customers Ledger",
           style: GoogleFonts.montserrat(
-            fontSize: 18,
+            fontSize: isTablet ? 24 : 18,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
@@ -240,206 +362,226 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     );
   }
 
-  Widget _buildRecentActivityList() {
-    final transactionsAsync = ref.watch(transactionsStreamProvider);
-
-    return transactionsAsync.when(
-      data: (transactions) {
-        if (transactions.isEmpty) {
-          return const Center(child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Text('No recent activity'),
-          ));
-        }
-
-        // Apply filters
-        final filtered = transactions.where((tx) {
-          if (_selectedFilter == 'All') return true;
-          if (_selectedFilter == 'Money' && tx.metalType.isEmpty) return true;
-          if (_selectedFilter == 'Gold' && tx.metalType == 'gold') return true;
-          if (_selectedFilter == 'Diamond' && tx.metalType == 'diamond') return true;
-          return false;
-        }).toList();
-
-        return Column(
-          children: filtered.map((activity) {
-            final isCredit = activity.type == TransactionType.receipt || activity.type == TransactionType.metalIn;
-            final color = isCredit ? const Color(0xFF2852C6) : const Color(0xFFC62828);
-            final typeLabel = isCredit ? 'In' : 'Out';
-            
-            String topRightLabel = '';
-            String middleRightLabel = '';
-            
-            if (activity.metalType.isEmpty) {
-              topRightLabel = activity.paymentMode.name.toUpperCase();
-              middleRightLabel = '₹ ${NumberFormat.decimalPattern('en_IN').format(activity.cashAmount)}';
-            } else if (activity.metalType == 'gold') {
-              topRightLabel = 'Gold (${activity.metalPurity}%)';
-              middleRightLabel = '${activity.metalWeight}g';
-            } else if (activity.metalType == 'diamond') {
-              topRightLabel = 'Diamond(${activity.metalWeight}ct)';
-              middleRightLabel = activity.metalPurity;
-            }
-
-            final initial = activity.partyName.isNotEmpty ? activity.partyName[0].toUpperCase() : '?';
-            final dateStr = DateFormat('dd MMM yyyy').format(activity.date);
-            final timeStr = DateFormat('hh:mm a').format(activity.date);
-
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PartyDetailScreen(
-                      party: PartyDetail(
-                        id: activity.partyId,
-                        name: activity.partyName,
-                        type: 'Customer',
-                        location: '',
-                        initial: initial,
-                        totalCashDue: '₹ 0',
-                        cashDueLabel: 'Settled',
-                        isCashYouOwe: false,
-                        totalGoldDue: '0g',
-                        goldDueLabel: 'Settled',
-                        isGoldYouOwe: true,
-                        phone: activity.partyPhone,
-                        transactions: [], // Will be handled dynamically in PartyDetailScreen
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+  Widget _buildPartiesList(List<PartyModel> filteredParties, bool isTablet, List<TransactionModel> transactions) {
+    if (filteredParties.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 48.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.people_outline, size: isTablet ? 80 : 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No customers found',
+                style: GoogleFonts.montserrat(
+                  fontSize: isTablet ? 18 : 16,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w500,
                 ),
-                child: IntrinsicHeight(
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: filteredParties.map((party) => _buildPartyCard(party, isTablet, transactions)).toList(),
+    );
+  }
+
+  Widget _buildPartyCard(PartyModel party, bool isTablet, List<TransactionModel> transactions) {
+    final partyTxns = transactions.where((t) => t.partyId == party.id).toList();
+    final txnCount = partyTxns.length;
+
+    Color leftBorderColor = const Color(0xFFDFBA6B); // Premium brand gold
+    if (party.cashBalance > 0 || party.goldBalanceGrams > 0 || party.diamondBalanceCarats > 0) {
+      leftBorderColor = const Color(0xFF2852C6); // Receivable Blue
+    } else if (party.cashBalance < 0 || party.goldBalanceGrams < 0 || party.diamondBalanceCarats < 0) {
+      leftBorderColor = const Color(0xFFC62828); // Payable Red
+    }
+
+    final initial = party.name.isNotEmpty ? party.name[0].toUpperCase() : '?';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PartyDetailScreen(
+              party: _getPartyDetail(party),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: isTablet ? 16 : 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(color: Colors.grey.withOpacity(0.12)),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: isTablet ? 6 : 4,
+                decoration: BoxDecoration(
+                  color: leftBorderColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(isTablet ? 20 : 16),
+                    bottomLeft: Radius.circular(isTablet ? 20 : 16),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(isTablet ? 20.0 : 16.0),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Container(
-                        width: 4,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            bottomLeft: Radius.circular(16),
+                        width: isTablet ? 64 : 54,
+                        height: isTablet ? 64 : 54,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF0EBE1),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          initial,
+                          style: GoogleFonts.montserrat(
+                            fontSize: isTablet ? 26 : 22,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF6B5800),
                           ),
                         ),
                       ),
+                      SizedBox(width: isTablet ? 20 : 16),
                       Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              party.name,
+                              style: GoogleFonts.montserrat(
+                                fontSize: isTablet ? 20 : 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.phone_outlined,
+                                  size: isTablet ? 16 : 13,
+                                  color: Colors.grey[500],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  party.phone.isNotEmpty ? party.phone : 'No Phone Number',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: isTablet ? 15 : 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 54,
-                                height: 54,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF0EBE1),
-                                  shape: BoxShape.circle,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isTablet ? 16 : 12,
+                                  vertical: isTablet ? 8 : 6,
                                 ),
-                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5EFE6),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                                ),
                                 child: Text(
-                                  initial,
+                                  txnCount == 1 ? '1 Transaction' : '$txnCount Transactions',
                                   style: GoogleFonts.montserrat(
-                                    fontSize: 22,
+                                    fontSize: isTablet ? 16 : 13,
                                     fontWeight: FontWeight.bold,
                                     color: const Color(0xFF6B5800),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      activity.partyName,
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      dateStr,
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 13,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    Text(
-                                      timeStr,
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 13,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    topRightLabel,
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: color,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    middleRightLabel,
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: color,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    typeLabel,
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: color,
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: Colors.grey[400],
+                                size: isTablet ? 24 : 20,
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  PartyDetail _getPartyDetail(PartyModel party) {
+    final name = party.name;
+    final type = party.type;
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    String location = party.address.isNotEmpty 
+        ? party.address.split(',').last.trim() 
+        : 'India';
+
+    List<PartyTransaction> transactions = [];
+
+    String totalCashDue = '₹${NumberFormat.decimalPattern('en_IN').format(party.cashBalance.abs())}';
+    String cashDueLabel = party.cashBalance >= 0 ? 'They Owe' : 'You Owe';
+    bool isCashYouOwe = party.cashBalance < 0;
+
+    String totalGoldDue = '${party.goldBalanceGrams.abs().toStringAsFixed(3)} g';
+    String goldDueLabel = party.goldBalanceGrams >= 0 ? 'They Owe' : 'You Owe';
+    bool isGoldYouOwe = party.goldBalanceGrams < 0;
+
+    return PartyDetail(
+      id: party.id,
+      name: name,
+      type: type,
+      location: location,
+      initial: initial,
+      totalCashDue: totalCashDue,
+      cashDueLabel: cashDueLabel,
+      isCashYouOwe: isCashYouOwe,
+      totalGoldDue: totalGoldDue,
+      goldDueLabel: goldDueLabel,
+      isGoldYouOwe: isGoldYouOwe,
+      phone: party.phone,
+      transactions: transactions,
     );
   }
 }

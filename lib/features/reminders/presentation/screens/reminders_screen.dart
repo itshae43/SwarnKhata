@@ -31,20 +31,21 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
     return Container(
       color: const Color(0xFFFDFBF7),
       child: SafeArea(
         child: Column(
           children: [
-            _buildTabBar(),
-            const SizedBox(height: 16),
-            _buildHeader(),
+            _buildTabBar(isTablet),
+            SizedBox(height: isTablet ? 24 : 16),
+            _buildHeader(isTablet),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildUpcomingList(),
-                  _buildHistoryList(),
+                  _buildUpcomingList(isTablet),
+                  _buildHistoryList(isTablet),
                 ],
               ),
             ),
@@ -54,7 +55,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(bool isTablet) {
     return Container(
       decoration: const BoxDecoration(
         border: Border(
@@ -65,10 +66,16 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
         controller: _tabController,
         labelColor: const Color(0xFF6B5800),
         unselectedLabelColor: Colors.grey[600],
-        labelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w700, fontSize: 14),
-        unselectedLabelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w500, fontSize: 14),
+        labelStyle: GoogleFonts.montserrat(
+          fontWeight: FontWeight.w700,
+          fontSize: isTablet ? 18 : 14,
+        ),
+        unselectedLabelStyle: GoogleFonts.montserrat(
+          fontWeight: FontWeight.w500,
+          fontSize: isTablet ? 18 : 14,
+        ),
         indicatorColor: const Color(0xFF6B5800),
-        indicatorWeight: 2,
+        indicatorWeight: isTablet ? 3 : 2,
         tabs: const [
           Tab(text: 'Upcoming'),
           Tab(text: 'History'),
@@ -77,22 +84,25 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isTablet) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: EdgeInsets.symmetric(horizontal: isTablet ? 24.0 : 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             'Upcoming Calls',
             style: GoogleFonts.montserrat(
-              fontSize: 20,
+              fontSize: isTablet ? 26 : 20,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 18 : 12,
+              vertical: isTablet ? 8 : 4,
+            ),
             decoration: BoxDecoration(
               border: Border.all(color: const Color(0xFFE0D8CA)),
               borderRadius: BorderRadius.circular(20),
@@ -100,9 +110,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: _selectedFilter,
-                icon: const Icon(Icons.filter_list, size: 16, color: Color(0xFF6B5800)),
+                icon: Icon(Icons.filter_list, size: isTablet ? 22 : 16, color: const Color(0xFF6B5800)),
                 style: GoogleFonts.montserrat(
-                  fontSize: 13,
+                  fontSize: isTablet ? 17 : 13,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF6B5800),
                 ),
@@ -128,7 +138,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     );
   }
 
-  Widget _buildUpcomingList() {
+  Widget _buildUpcomingList(bool isTablet) {
     final remindersAsync = ref.watch(remindersStreamProvider);
 
     return remindersAsync.when(
@@ -143,14 +153,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(isTablet ? 24.0 : 16.0),
           itemCount: upcoming.length + 1,
           itemBuilder: (context, index) {
             if (index == upcoming.length) {
-              return _buildFooter();
+              return _buildFooter(isTablet);
             }
             final reminder = upcoming[index];
-            return _buildCallCard(reminder);
+            return _buildCallCard(reminder, isTablet);
           },
         );
       },
@@ -159,7 +169,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     );
   }
 
-  Widget _buildHistoryList() {
+  Widget _buildHistoryList(bool isTablet) {
     final remindersAsync = ref.watch(remindersStreamProvider);
 
     return remindersAsync.when(
@@ -174,11 +184,11 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(isTablet ? 24.0 : 16.0),
           itemCount: history.length,
           itemBuilder: (context, index) {
             final reminder = history[index];
-            return _buildCallCard(reminder);
+            return _buildCallCard(reminder, isTablet);
           },
         );
       },
@@ -200,7 +210,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     );
   }
 
-  Widget _buildCallCard(ReminderModel reminder) {
+  Widget _buildCallCard(ReminderModel reminder, bool isTablet) {
     final isPending = reminder.status != ReminderStatus.completed;
     
     // Logic for status label and color
@@ -242,10 +252,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     final dateStr = DateFormat('dd MMM, hh:mm a').format(reminder.date);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: isTablet ? 20 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
         border: Border.all(color: Colors.grey.withOpacity(0.15)),
         boxShadow: [
           BoxShadow(
@@ -260,18 +270,18 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              width: 4,
+              width: isTablet ? 6 : 4,
               decoration: BoxDecoration(
                 color: statusColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(isTablet ? 16 : 12),
+                  bottomLeft: Radius.circular(isTablet ? 16 : 12),
                 ),
               ),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(isTablet ? 20.0 : 16.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,12 +291,12 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                       children: [
                         Row(
                           children: [
-                            Icon(statusIcon, size: 14, color: statusColor),
+                            Icon(statusIcon, size: isTablet ? 18 : 14, color: statusColor),
                             const SizedBox(width: 4),
                             Text(
                               statusLabel,
                               style: GoogleFonts.montserrat(
-                                fontSize: 10,
+                                fontSize: isTablet ? 14 : 10,
                                 fontWeight: FontWeight.bold,
                                 color: statusColor,
                                 letterSpacing: 0.5,
@@ -297,14 +307,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                         Text(
                           dateStr,
                           style: GoogleFonts.montserrat(
-                            fontSize: 12,
+                            fontSize: isTablet ? 16 : 12,
                             fontWeight: FontWeight.bold,
                             color: statusColor,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: isTablet ? 12 : 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,7 +322,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                         Text(
                           reminder.partyName,
                           style: GoogleFonts.montserrat(
-                            fontSize: 18,
+                            fontSize: isTablet ? 22 : 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                           ),
@@ -320,7 +330,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                         Text(
                           reminder.title,
                           style: GoogleFonts.montserrat(
-                            fontSize: 11,
+                            fontSize: isTablet ? 15 : 11,
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
@@ -331,19 +341,22 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 12 : 8,
+                            vertical: isTablet ? 6 : 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.grey.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.phone_android, size: 14, color: Colors.black87),
+                              Icon(Icons.phone_android, size: isTablet ? 18 : 14, color: Colors.black87),
                               const SizedBox(width: 6),
                               Text(
                                 reminder.partyPhone.isNotEmpty ? reminder.partyPhone : 'No phone number saved',
                                 style: GoogleFonts.montserrat(
-                                  fontSize: 13,
+                                  fontSize: isTablet ? 17 : 13,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.black87,
                                 ),
@@ -353,9 +366,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: isTablet ? 16 : 12),
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isTablet ? 16 : 12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF9F7F2),
                         borderRadius: BorderRadius.circular(8),
@@ -363,14 +377,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                       child: Text(
                         reminder.note,
                         style: GoogleFonts.montserrat(
-                          fontSize: 12,
+                          fontSize: isTablet ? 16 : 12,
                           color: Colors.grey[800],
                           height: 1.4,
                         ),
                       ),
                     ),
                     if (isPending) ...[
-                      const SizedBox(height: 16),
+                      SizedBox(height: isTablet ? 20 : 16),
                       Row(
                         children: [
                           _buildActionIcon(
@@ -378,33 +392,29 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                             color: const Color(0xFF2E7D32),
                             onTap: () => CommunicationUtils.makeCall(reminder.partyPhone),
                             label: 'Call',
+                            isTablet: isTablet,
                           ),
-                          const SizedBox(width: 12),
-                          _buildActionIcon(
-                            icon: Icons.message_outlined,
-                            color: const Color(0xFF0288D1),
-                            onTap: () => CommunicationUtils.sendSMS(reminder.partyPhone),
-                            label: 'SMS',
-                          ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: isTablet ? 18 : 12),
                           _buildActionIcon(
                             icon: Icons.chat_outlined,
                             color: const Color(0xFF25D366),
                             onTap: () => CommunicationUtils.launchWhatsApp(reminder.partyPhone, reminder.note),
                             label: 'WA',
+                            isTablet: isTablet,
                           ),
                           const Spacer(),
                           TextButton(
-                            onPressed: () => _showEditReminderDialog(reminder),
+                            onPressed: () => _showEditReminderDialog(reminder, isTablet),
                             child: Text(
                               'Edit',
                               style: GoogleFonts.montserrat(
                                 color: Colors.grey[700],
                                 fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                                fontSize: isTablet ? 17 : 13,
                               ),
                             ),
                           ),
+                          SizedBox(width: isTablet ? 12 : 0),
                           ElevatedButton(
                             onPressed: () {
                               ref.read(reminderNotifierProvider.notifier).markAsDone(reminder.id);
@@ -415,9 +425,12 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isTablet ? 18 : 12,
+                                vertical: isTablet ? 12 : 8,
+                              ),
                             ),
-                            child: const Icon(Icons.check, size: 18, color: Colors.black87),
+                            child: Icon(Icons.check, size: isTablet ? 22 : 18, color: Colors.black87),
                           ),
                         ],
                       ),
@@ -432,7 +445,13 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     );
   }
 
-  Widget _buildActionIcon({required IconData icon, required Color color, required VoidCallback onTap, required String label}) {
+  Widget _buildActionIcon({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    required String label,
+    required bool isTablet,
+  }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -440,19 +459,19 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(isTablet ? 12 : 8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: isTablet ? 26 : 20),
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
           style: GoogleFonts.montserrat(
-            fontSize: 9,
+            fontSize: isTablet ? 13 : 9,
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -461,26 +480,42 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
     );
   }
 
-  void _showEditReminderDialog(ReminderModel reminder) {
+  void _showEditReminderDialog(ReminderModel reminder, bool isTablet) {
     final noteController = TextEditingController(text: reminder.note);
     DateTime selectedDate = reminder.date;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Edit Reminder', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+        ),
+        title: Text(
+          'Edit Reminder',
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.bold,
+            fontSize: isTablet ? 24 : 18,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: noteController,
-              decoration: const InputDecoration(labelText: 'Note'),
+              style: GoogleFonts.montserrat(fontSize: isTablet ? 18 : 14),
+              decoration: InputDecoration(
+                labelText: 'Note',
+                labelStyle: GoogleFonts.montserrat(fontSize: isTablet ? 16 : 12),
+              ),
               maxLines: 3,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isTablet ? 24 : 16),
             ListTile(
-              title: Text('Date: ${DateFormat('dd MMM yyyy • hh:mm a').format(selectedDate)}'),
-              trailing: const Icon(Icons.calendar_today),
+              title: Text(
+                'Date: ${DateFormat('dd MMM yyyy • hh:mm a').format(selectedDate)}',
+                style: GoogleFonts.montserrat(fontSize: isTablet ? 18 : 14),
+              ),
+              trailing: Icon(Icons.calendar_today, size: isTablet ? 24 : 20),
               onTap: () async {
                 final date = await showDatePicker(
                   context: context,
@@ -502,7 +537,13 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.montserrat(fontSize: isTablet ? 17 : 13),
+            ),
+          ),
           ElevatedButton(
             onPressed: () {
               ref.read(reminderNotifierProvider.notifier).updateReminder(
@@ -510,31 +551,47 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> with SingleTi
               );
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A3E1F)),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4A3E1F),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 20 : 16,
+                vertical: isTablet ? 12 : 8,
+              ),
+            ),
+            child: Text(
+              'Save',
+              style: GoogleFonts.montserrat(
+                color: Colors.white,
+                fontSize: isTablet ? 17 : 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(bool isTablet) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      padding: EdgeInsets.symmetric(vertical: isTablet ? 32.0 : 24.0),
       child: Column(
         children: [
-          Icon(Icons.calendar_today_outlined, size: 40, color: Colors.grey[300]),
+          Icon(Icons.calendar_today_outlined, size: isTablet ? 56 : 40, color: Colors.grey[300]),
           const SizedBox(height: 12),
           Text(
             'No more upcoming reminders for this week.',
             style: GoogleFonts.montserrat(
-              fontSize: 13,
+              fontSize: isTablet ? 17 : 13,
               color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 80), // Padding for bottom nav
+          SizedBox(height: isTablet ? 120 : 80), // Padding for bottom nav
         ],
       ),
     );

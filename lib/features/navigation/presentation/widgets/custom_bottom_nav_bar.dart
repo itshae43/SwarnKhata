@@ -9,6 +9,7 @@ class CustomBottomNavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(navigationProvider);
+    final isTablet = MediaQuery.of(context).size.width >= 600;
 
     return Container(
       decoration: BoxDecoration(
@@ -27,8 +28,8 @@ class CustomBottomNavBar extends ConsumerWidget {
       ),
       child: SafeArea(
         child: Container(
-          height: 76,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: isTablet ? 88 : 76,
+          padding: EdgeInsets.symmetric(horizontal: isTablet ? 120 : 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -36,30 +37,35 @@ class CustomBottomNavBar extends ConsumerWidget {
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isSelected: currentIndex == 0,
+                isTablet: isTablet,
                 onTap: () => ref.read(navigationProvider.notifier).setIndex(0),
               ),
               _NavBarItem(
                 icon: Icons.add_box_rounded,
                 label: 'Entries',
                 isSelected: currentIndex == 1,
+                isTablet: isTablet,
                 onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
               ),
               _NavBarItem(
                 icon: Icons.account_balance_wallet_rounded,
                 label: 'Ledger',
                 isSelected: currentIndex == 2,
+                isTablet: isTablet,
                 onTap: () => ref.read(navigationProvider.notifier).setIndex(2),
               ),
               _NavBarItem(
                 icon: Icons.notifications_active_rounded,
                 label: 'Reminders',
                 isSelected: currentIndex == 3,
+                isTablet: isTablet,
                 onTap: () => ref.read(navigationProvider.notifier).setIndex(3),
               ),
               _NavBarItem(
                 icon: Icons.settings_rounded,
                 label: 'Settings',
                 isSelected: currentIndex == 4,
+                isTablet: isTablet,
                 onTap: () => ref.read(navigationProvider.notifier).setIndex(4),
               ),
             ],
@@ -74,17 +80,23 @@ class _NavBarItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
+  final bool isTablet;
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.icon,
     required this.label,
     required this.isSelected,
+    required this.isTablet,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final double bgSize = isTablet ? 56 : 42;
+    final double iconSize = isTablet ? 32 : 24;
+    final double fontSize = isTablet ? 15 : 10;
+
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -99,8 +111,8 @@ class _NavBarItem extends StatelessWidget {
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 350),
                   curve: Curves.easeOutBack,
-                  width: isSelected ? 42 : 0,
-                  height: 42,
+                  width: isSelected ? bgSize : 0,
+                  height: bgSize,
                   decoration: BoxDecoration(
                     color: const Color(0xFF01565B),
                     shape: BoxShape.circle,
@@ -117,7 +129,7 @@ class _NavBarItem extends StatelessWidget {
                 ),
                 // Icon with scale and color animation
                 AnimatedScale(
-                  scale: isSelected ? 1.0 : 1.0,
+                  scale: 1.0,
                   duration: const Duration(milliseconds: 300),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -126,7 +138,7 @@ class _NavBarItem extends StatelessWidget {
                       color: isSelected 
                           ? const Color(0xFFCFA63A) 
                           : const Color(0xFF4D4635).withOpacity(0.6),
-                      size: 24,
+                      size: iconSize,
                     ),
                   ),
                 ),
@@ -137,14 +149,23 @@ class _NavBarItem extends StatelessWidget {
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
-              style: GoogleFonts.inder(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected 
-                    ? const Color(0xFF01565B) 
-                    : const Color(0xFF4D4635).withOpacity(0.6),
-                letterSpacing: isSelected ? 0.3 : 0,
-              ),
+              style: isTablet
+                  ? GoogleFonts.montserrat(
+                      fontSize: fontSize,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isSelected 
+                          ? const Color(0xFF01565B) 
+                          : const Color(0xFF4D4635).withOpacity(0.6),
+                      letterSpacing: isSelected ? 0.3 : 0,
+                    )
+                  : GoogleFonts.inder(
+                      fontSize: fontSize,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected 
+                          ? const Color(0xFF01565B) 
+                          : const Color(0xFF4D4635).withOpacity(0.6),
+                      letterSpacing: isSelected ? 0.3 : 0,
+                    ),
               child: Text(label),
             ),
           ],

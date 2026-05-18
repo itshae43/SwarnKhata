@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
+import '../../../home/presentation/screens/home_screen.dart';
 
 class CollapsibleSidebar extends ConsumerWidget {
   final int currentIndex;
@@ -74,8 +75,8 @@ class CollapsibleSidebar extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             userName,
-                            style: GoogleFonts.inder(
-                              fontSize: 16,
+                            style: GoogleFonts.montserrat(
+                              fontSize: 18, // Increased from 16
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF735C0F), // Olive gold text
                               letterSpacing: 0.3,
@@ -90,7 +91,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                     ),
             ),
             const Divider(color: Color(0xFFE5DEC9), height: 1, thickness: 1),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20), // Increased from 16
 
             // Navigation Items (Home, Entry, Ledger, Reminders)
             Expanded(
@@ -105,7 +106,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                     isCollapsed: isCollapsed,
                     onTap: () => onTap(0),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12), // Increased from 8
                   _SidebarItem(
                     icon: Icons.add_circle_outline_rounded,
                     label: 'Entry',
@@ -113,7 +114,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                     isCollapsed: isCollapsed,
                     onTap: () => onTap(1),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12), // Increased from 8
                   _SidebarItem(
                     icon: Icons.note_alt_outlined,
                     label: 'Ledger',
@@ -121,7 +122,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                     isCollapsed: isCollapsed,
                     onTap: () => onTap(2),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12), // Increased from 8
                   _SidebarItem(
                     icon: Icons.notifications_none_rounded,
                     label: 'Reminders',
@@ -132,6 +133,8 @@ class CollapsibleSidebar extends ConsumerWidget {
                 ],
               ),
             ),
+
+
 
             // Divider above Settings
             const Divider(color: Color(0xFFE5DEC9), height: 1, thickness: 1),
@@ -191,7 +194,7 @@ class CollapsibleSidebar extends ConsumerWidget {
       alignment: Alignment.center,
       child: Text(
         initial,
-        style: GoogleFonts.inder(
+        style: GoogleFonts.montserrat(
           color: const Color(0xFFFAF6EE),
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -204,8 +207,8 @@ class CollapsibleSidebar extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
+        width: 36, // Increased from 32
+        height: 36, // Increased from 32
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
@@ -225,7 +228,7 @@ class CollapsibleSidebar extends ConsumerWidget {
         child: Icon(
           collapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
           color: tealColor,
-          size: 20,
+          size: 24, // Increased from 20
         ),
       ),
     );
@@ -266,7 +269,7 @@ class _SidebarItemState extends State<_SidebarItem> {
     if (widget.isCollapsed) {
       content = Container(
         width: 52,
-        height: 36,
+        height: 48, // Increased from 36
         decoration: widget.isSelected
             ? BoxDecoration(
                 color: goldColor,
@@ -281,16 +284,16 @@ class _SidebarItemState extends State<_SidebarItem> {
         child: Icon(
           widget.icon,
           color: widget.isSelected ? borderTealColor : inactiveTextColor,
-          size: 22,
+          size: 26, // Increased from 22
         ),
       );
     } else {
       content = Container(
-        height: 48,
+        height: 56, // Increased from 48
         decoration: widget.isSelected
             ? BoxDecoration(
                 color: goldColor,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10), // Slightly rounder for softer feel
                 border: Border.all(
                   color: borderTealColor,
                   width: 1.5,
@@ -298,23 +301,23 @@ class _SidebarItemState extends State<_SidebarItem> {
               )
             : BoxDecoration(
                 color: _isHovered ? tealColor.withOpacity(0.04) : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 18), // Increased from 16
         child: Row(
           children: [
             Icon(
               widget.icon,
               color: widget.isSelected ? borderTealColor : inactiveTextColor,
-              size: 22,
+              size: 26, // Increased from 22
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 18), // Increased from 16
             Expanded(
               child: Text(
                 widget.label,
-                style: GoogleFonts.inder(
-                  fontSize: 14,
-                  fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w500,
+                style: GoogleFonts.montserrat(
+                  fontSize: 18, // Increased from 14
+                  fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w600, // Stronger weight
                   color: widget.isSelected ? borderTealColor : inactiveTextColor,
                 ),
               ),

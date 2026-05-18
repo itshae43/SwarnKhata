@@ -21,6 +21,9 @@ class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProvid
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   bool _isSidebarCollapsed = false;
+  
+  // Persistent GlobalKey to reparent the bodyContent smoothly on orientation change
+  final GlobalKey _bodyKey = GlobalKey(debugLabel: 'main_body_content_key');
 
   @override
   void initState() {
@@ -53,8 +56,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
     final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final showSidebar = isTablet && isLandscape;
 
     Widget bodyContent = FadeTransition(
+      key: _bodyKey,
       opacity: _fadeAnimation,
       child: IndexedStack(
         index: currentIndex,
@@ -68,7 +74,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProvid
       ),
     );
 
-    if (isTablet) {
+    if (showSidebar) {
       bodyContent = Row(
         children: [
           CollapsibleSidebar(
@@ -93,7 +99,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProvid
     return Scaffold(
       backgroundColor: const Color(0xFFFDFBF7),
       body: bodyContent,
-      bottomNavigationBar: isTablet ? null : const CustomBottomNavBar(),
+      bottomNavigationBar: showSidebar ? null : const CustomBottomNavBar(),
     );
   }
 }

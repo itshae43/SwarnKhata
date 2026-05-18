@@ -10,13 +10,17 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
+    final isTablet = MediaQuery.of(context).size.width >= 600;
 
     return Container(
       color: const Color(0xFFFDFBF7),
       child: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 32.0 : 20.0,
+            vertical: isTablet ? 24.0 : 20.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -24,19 +28,21 @@ class SettingsScreen extends ConsumerWidget {
               Text(
                 'Settings',
                 style: GoogleFonts.montserrat(
-                  fontSize: 24,
+                  fontSize: isTablet ? 30 : 24,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF1E1E1E),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: isTablet ? 32 : 24),
 
               // ─── PROFILE CARD ────────────────────────────────────
               userAsync.when(
                 data: (UserModel? user) => _buildProfileCard(
-                    user?.fullName ?? 'User',
-                    user?.businessName ?? '',
-                    user?.email ?? user?.phone ?? ''),
+                  user?.fullName ?? 'User',
+                  user?.businessName ?? '',
+                  user?.email ?? user?.phone ?? '',
+                  isTablet,
+                ),
                 loading: () => const Center(
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation(Color(0xFFD4B13B)),
@@ -44,60 +50,67 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 error: (e, _) => const SizedBox.shrink(),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: isTablet ? 32 : 24),
 
               // ─── SECTION: ACCOUNT ────────────────────────────────
-              _sectionLabel('Account'),
-              const SizedBox(height: 12),
+              _sectionLabel('Account', isTablet),
+              SizedBox(height: isTablet ? 16 : 12),
               _buildSettingsTile(
                 icon: Icons.person_outline_rounded,
                 label: 'Edit Profile',
                 onTap: () {},
+                isTablet: isTablet,
               ),
               _buildSettingsTile(
                 icon: Icons.lock_outline_rounded,
                 label: 'Change Password',
                 onTap: () {},
+                isTablet: isTablet,
               ),
               _buildSettingsTile(
                 icon: Icons.notifications_none_outlined,
                 label: 'Notifications',
                 onTap: () {},
+                isTablet: isTablet,
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: isTablet ? 28 : 20),
 
               // ─── SECTION: BUSINESS ───────────────────────────────
-              _sectionLabel('Business'),
-              const SizedBox(height: 12),
+              _sectionLabel('Business', isTablet),
+              SizedBox(height: isTablet ? 16 : 12),
               _buildSettingsTile(
                 icon: Icons.store_outlined,
                 label: 'Business Details',
                 onTap: () {},
+                isTablet: isTablet,
               ),
               _buildSettingsTile(
                 icon: Icons.currency_rupee_outlined,
                 label: 'Currency & Units',
                 onTap: () {},
+                isTablet: isTablet,
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: isTablet ? 28 : 20),
 
               // ─── SECTION: SUPPORT ────────────────────────────────
-              _sectionLabel('Support'),
-              const SizedBox(height: 12),
+              _sectionLabel('Support', isTablet),
+              SizedBox(height: isTablet ? 16 : 12),
               _buildSettingsTile(
                 icon: Icons.help_outline_rounded,
                 label: 'Help & FAQ',
                 onTap: () {},
+                isTablet: isTablet,
               ),
               _buildSettingsTile(
                 icon: Icons.privacy_tip_outlined,
                 label: 'Privacy Policy',
                 onTap: () {},
+                isTablet: isTablet,
               ),
-              const SizedBox(height: 28),
+              SizedBox(height: isTablet ? 36 : 28),
 
               // ─── SIGN OUT BUTTON ─────────────────────────────────
-              _buildSignOutButton(context, ref),
+              _buildSignOutButton(context, ref, isTablet),
               const SizedBox(height: 80),
             ],
           ),
@@ -107,12 +120,12 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildProfileCard(
-      String fullName, String businessName, String contact) {
+      String fullName, String businessName, String contact, bool isTablet) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isTablet ? 28 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 24 : 20),
         border: Border.all(color: Colors.grey.withOpacity(0.15)),
         boxShadow: [
           BoxShadow(
@@ -125,10 +138,10 @@ class SettingsScreen extends ConsumerWidget {
       child: Row(
         children: [
           Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
+            width: isTablet ? 80 : 60,
+            height: isTablet ? 80 : 60,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
                 colors: [Color(0xFFD4B13B), Color(0xFF8A7311)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -139,13 +152,13 @@ class SettingsScreen extends ConsumerWidget {
             child: Text(
               fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
               style: GoogleFonts.montserrat(
-                fontSize: 24,
+                fontSize: isTablet ? 32 : 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isTablet ? 20 : 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +166,7 @@ class SettingsScreen extends ConsumerWidget {
                 Text(
                   fullName.isEmpty ? 'User' : fullName,
                   style: GoogleFonts.montserrat(
-                    fontSize: 18,
+                    fontSize: isTablet ? 22 : 18,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF1E1E1E),
                   ),
@@ -163,7 +176,7 @@ class SettingsScreen extends ConsumerWidget {
                   Text(
                     businessName,
                     style: GoogleFonts.montserrat(
-                      fontSize: 13,
+                      fontSize: isTablet ? 16 : 13,
                       color: const Color(0xFF8A7311),
                       fontWeight: FontWeight.w600,
                     ),
@@ -173,24 +186,24 @@ class SettingsScreen extends ConsumerWidget {
                 Text(
                   contact,
                   style: GoogleFonts.montserrat(
-                    fontSize: 12,
+                    fontSize: isTablet ? 15 : 12,
                     color: Colors.grey[600],
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.edit_outlined, color: Colors.grey[400], size: 20),
+          Icon(Icons.edit_outlined, color: Colors.grey[400], size: isTablet ? 26 : 20),
         ],
       ),
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(String label, bool isTablet) {
     return Text(
       label.toUpperCase(),
       style: GoogleFonts.montserrat(
-        fontSize: 11,
+        fontSize: isTablet ? 14 : 11,
         fontWeight: FontWeight.w700,
         color: Colors.grey[500],
         letterSpacing: 1.2,
@@ -202,75 +215,102 @@ class SettingsScreen extends ConsumerWidget {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    required bool isTablet,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: EdgeInsets.only(bottom: isTablet ? 14 : 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: isTablet ? 22 : 16,
+          vertical: isTablet ? 18 : 14,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(isTablet ? 18 : 14),
           border: Border.all(color: Colors.grey.withOpacity(0.12)),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(isTablet ? 12 : 8),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF3D0),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: const Color(0xFF8A7311), size: 18),
+              child: Icon(icon, color: const Color(0xFF8A7311), size: isTablet ? 24 : 18),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: isTablet ? 18 : 14),
             Expanded(
               child: Text(
                 label,
                 style: GoogleFonts.montserrat(
-                  fontSize: 15,
+                  fontSize: isTablet ? 18 : 15,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF1E1E1E),
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+            Icon(Icons.chevron_right, color: Colors.grey[400], size: isTablet ? 26 : 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSignOutButton(BuildContext context, WidgetRef ref) {
+  Widget _buildSignOutButton(BuildContext context, WidgetRef ref, bool isTablet) {
     return SizedBox(
       width: double.infinity,
-      height: 52,
+      height: isTablet ? 64 : 52,
       child: OutlinedButton.icon(
         onPressed: () async {
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              title: Text('Sign Out',
-                  style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
-              content: Text('Are you sure you want to sign out?',
-                  style: GoogleFonts.montserrat(fontSize: 14)),
+                borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
+              ),
+              title: Text(
+                'Sign Out',
+                style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isTablet ? 22 : 18,
+                ),
+              ),
+              content: Text(
+                'Are you sure you want to sign out?',
+                style: GoogleFonts.montserrat(fontSize: isTablet ? 17 : 14),
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: Text('Cancel',
-                      style: GoogleFonts.montserrat(color: Colors.grey[700])),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.grey[700],
+                      fontSize: isTablet ? 16 : 13,
+                    ),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(ctx, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFC62828),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 20 : 16,
+                      vertical: isTablet ? 12 : 8,
+                    ),
                   ),
-                  child: Text('Sign Out',
-                      style: GoogleFonts.montserrat(color: Colors.white)),
+                  child: Text(
+                    'Sign Out',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: isTablet ? 16 : 13,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -279,11 +319,11 @@ class SettingsScreen extends ConsumerWidget {
             await ref.read(authNotifierProvider.notifier).signOut();
           }
         },
-        icon: const Icon(Icons.logout_rounded, color: Color(0xFFC62828)),
+        icon: Icon(Icons.logout_rounded, color: const Color(0xFFC62828), size: isTablet ? 24 : 20),
         label: Text(
           'Sign Out',
           style: GoogleFonts.montserrat(
-            fontSize: 15,
+            fontSize: isTablet ? 18 : 15,
             fontWeight: FontWeight.w600,
             color: const Color(0xFFC62828),
           ),
@@ -291,7 +331,7 @@ class SettingsScreen extends ConsumerWidget {
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Color(0xFFC62828)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(isTablet ? 18 : 14),
           ),
         ),
       ),
