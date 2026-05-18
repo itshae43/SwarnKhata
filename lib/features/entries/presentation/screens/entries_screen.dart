@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:swarn_khata/core/models/party_model.dart';
 import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
 import 'package:swarn_khata/features/parties/providers/party_providers.dart';
 import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
@@ -49,11 +50,11 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
   }
 
   TextStyle _textStyle(BuildContext context, TextStyle baseStyle) {
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
     if (isTablet) {
-      final double? size = baseStyle.fontSize;
+      final double size = baseStyle.fontSize ?? 14;
       return GoogleFonts.montserrat(
-        fontSize: size != null ? size + 4 : 17,
+        fontSize: size + 1.5,
         fontWeight: baseStyle.fontWeight,
         color: baseStyle.color,
         letterSpacing: baseStyle.letterSpacing,
@@ -65,10 +66,13 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
 
     // Listen to parties stream to auto-select pending party if it was added via Quick Add
-    ref.listen<AsyncValue<List<PartyModel>>>(partiesStreamProvider, (prev, next) {
+    ref.listen<AsyncValue<List<PartyModel>>>(partiesStreamProvider, (
+      prev,
+      next,
+    ) {
       if (_pendingPartyId != null && next.hasValue) {
         final list = next.value ?? [];
         final found = list.where((p) => p.id == _pendingPartyId).firstOrNull;
@@ -102,19 +106,22 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                     children: [
                       Text(
                         'New Entry',
-                        style: _textStyle(context, const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        )),
+                        style: _textStyle(
+                          context,
+                          const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Record transaction details.',
-                        style: _textStyle(context, TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                        )),
+                        style: _textStyle(
+                          context,
+                          TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                        ),
                       ),
                     ],
                   ),
@@ -194,11 +201,14 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                 children: [
                   Text(
                     'Party / Customer',
-                    style: _textStyle(context, const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    )),
+                    style: _textStyle(
+                      context,
+                      const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
                   ),
                   InkWell(
                     onTap: () async {
@@ -224,15 +234,22 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.add, size: isTablet ? 20 : 16, color: const Color(0xFF8A7311)),
+                          Icon(
+                            Icons.add,
+                            size: isTablet ? 20 : 16,
+                            color: const Color(0xFF8A7311),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Add New',
-                            style: _textStyle(context, const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF8A7311),
-                            )),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF8A7311),
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -247,11 +264,14 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
               // Category Toggle
               Text(
                 'Category',
-                style: _textStyle(context, const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                )),
+                style: _textStyle(
+                  context,
+                  const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
               ),
               const SizedBox(height: 8),
               Container(
@@ -285,11 +305,14 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       // Payment Mode
                       Text(
                         'Payment Mode',
-                        style: _textStyle(context, const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        )),
+                        style: _textStyle(
+                          context,
+                          const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -306,11 +329,14 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       // Amount
                       Text(
                         'Amount',
-                        style: _textStyle(context, const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        )),
+                        style: _textStyle(
+                          context,
+                          const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextField(
@@ -320,18 +346,24 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                           FilteringTextInputFormatter.digitsOnly,
                           _IndianCurrencyFormatter(),
                         ],
-                        style: _textStyle(context, const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        )),
-                        decoration: InputDecoration(
-                          hintText: '0',
-                          hintStyle: _textStyle(context, TextStyle(
-                            color: Colors.grey.shade300,
+                        style: _textStyle(
+                          context,
+                          const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                          )),
+                            color: Colors.black87,
+                          ),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          hintStyle: _textStyle(
+                            context,
+                            TextStyle(
+                              color: Colors.grey.shade300,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           prefixIcon: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Container(
@@ -345,15 +377,21 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                               ),
                               child: Text(
                                 '₹',
-                                style: _textStyle(context, const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF8A7311),
-                                )),
+                                style: _textStyle(
+                                  context,
+                                  const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF8A7311),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 0,
+                            minHeight: 0,
+                          ),
                           filled: true,
                           fillColor: Colors.white,
                           contentPadding: EdgeInsets.symmetric(
@@ -370,7 +408,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFF8A7311)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF8A7311),
+                            ),
                           ),
                         ),
                       ),
@@ -389,31 +429,60 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         children: [
                           Text(
                             'Purity %',
-                            style: _textStyle(context, const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            )),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _purityController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             textAlign: TextAlign.right,
-                            style: _textStyle(context, const TextStyle(fontSize: 16, color: Colors.black87)),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
                             decoration: InputDecoration(
                               hintText: '99.5',
-                              hintStyle: _textStyle(context, TextStyle(color: Colors.grey.shade400, fontSize: 16)),
+                              hintStyle: _textStyle(
+                                context,
+                                TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 16,
+                                ),
+                              ),
                               suffixIcon: Padding(
                                 padding: const EdgeInsets.only(right: 16.0),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text('%', style: _textStyle(context, TextStyle(fontSize: 18, color: Colors.grey.shade600))),
+                                    Text(
+                                      '%',
+                                      style: _textStyle(
+                                        context,
+                                        TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                              suffixIconConstraints: const BoxConstraints(
+                                minWidth: 0,
+                                minHeight: 0,
+                              ),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: EdgeInsets.symmetric(
@@ -422,15 +491,21 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade400),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade400,
+                                ),
                               ),
                             ),
                           ),
@@ -444,31 +519,60 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         children: [
                           Text(
                             'Weight (g)',
-                            style: _textStyle(context, const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            )),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _weightController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             textAlign: TextAlign.right,
-                            style: _textStyle(context, const TextStyle(fontSize: 16, color: Colors.black87)),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
                             decoration: InputDecoration(
                               hintText: '0.00',
-                              hintStyle: _textStyle(context, TextStyle(color: Colors.grey.shade400, fontSize: 16)),
+                              hintStyle: _textStyle(
+                                context,
+                                TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 16,
+                                ),
+                              ),
                               suffixIcon: Padding(
                                 padding: const EdgeInsets.only(right: 16.0),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text('g', style: _textStyle(context, TextStyle(fontSize: 18, color: Colors.grey.shade600))),
+                                    Text(
+                                      'g',
+                                      style: _textStyle(
+                                        context,
+                                        TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                              suffixIconConstraints: const BoxConstraints(
+                                minWidth: 0,
+                                minHeight: 0,
+                              ),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: EdgeInsets.symmetric(
@@ -477,15 +581,21 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade400),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade400,
+                                ),
                               ),
                             ),
                           ),
@@ -506,21 +616,40 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         children: [
                           Text(
                             'CARAT (CT)',
-                            style: _textStyle(context, const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            )),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _caratController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             textAlign: TextAlign.center,
-                            style: _textStyle(context, const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
                             decoration: InputDecoration(
                               hintText: '0.00',
-                              hintStyle: _textStyle(context, TextStyle(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600)),
+                              hintStyle: _textStyle(
+                                context,
+                                TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: EdgeInsets.symmetric(
@@ -529,15 +658,21 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade400),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade400,
+                                ),
                               ),
                             ),
                           ),
@@ -551,21 +686,38 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         children: [
                           Text(
                             'PIECES',
-                            style: _textStyle(context, const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            )),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _piecesController,
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
-                            style: _textStyle(context, const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
                             decoration: InputDecoration(
                               hintText: '0',
-                              hintStyle: _textStyle(context, TextStyle(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600)),
+                              hintStyle: _textStyle(
+                                context,
+                                TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: EdgeInsets.symmetric(
@@ -574,15 +726,21 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade400),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade400,
+                                ),
                               ),
                             ),
                           ),
@@ -597,20 +755,30 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
               // Particulars / Notes
               Text(
                 'Particulars / Notes',
-                style: _textStyle(context, const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                )),
+                style: _textStyle(
+                  context,
+                  const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _notesController,
                 maxLines: 3,
-                style: _textStyle(context, const TextStyle(fontSize: 15, color: Colors.black87)),
+                style: _textStyle(
+                  context,
+                  const TextStyle(fontSize: 15, color: Colors.black87),
+                ),
                 decoration: InputDecoration(
-                  hintText: 'Add details about the metal quality,\nhallmark, etc...',
-                  hintStyle: _textStyle(context, TextStyle(color: Colors.grey.shade500, fontSize: 15)),
+                  hintText:
+                      'Add details about the metal quality,\nhallmark, etc...',
+                  hintStyle: _textStyle(
+                    context,
+                    TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                  ),
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: EdgeInsets.all(isTablet ? 20 : 16),
@@ -649,7 +817,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         });
                       },
                       style: TextButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
+                        padding: EdgeInsets.symmetric(
+                          vertical: isTablet ? 20 : 16,
+                        ),
                         backgroundColor: const Color(0xFFF4EDE4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
@@ -657,11 +827,14 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       ),
                       child: Text(
                         'Cancel',
-                        style: _textStyle(context, const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        )),
+                        style: _textStyle(
+                          context,
+                          const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -671,7 +844,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       onPressed: () async {
                         if (_selectedParty == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please select a party')),
+                            const SnackBar(
+                              content: Text('Please select a party'),
+                            ),
                           );
                           return;
                         }
@@ -679,52 +854,77 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                         // Determine TransactionType
                         TransactionType tType = TransactionType.sale; // default
                         if (_transactionType == 'IN') {
-                          if (_category == 'Money') tType = TransactionType.receipt;
-                          else tType = TransactionType.metalIn;
+                          if (_category == 'Money')
+                            tType = TransactionType.receipt;
+                          else
+                            tType = TransactionType.metalIn;
                         } else {
-                          if (_category == 'Money') tType = TransactionType.payment;
-                          else tType = TransactionType.metalOut;
+                          if (_category == 'Money')
+                            tType = TransactionType.payment;
+                          else
+                            tType = TransactionType.metalOut;
                         }
 
                         // Determine PaymentMode
                         PaymentMode pMode = PaymentMode.cash;
                         if (_category == 'Money') {
-                          if (_paymentMode == 'Cash') pMode = PaymentMode.cash;
-                          else if (_paymentMode == 'UPI') pMode = PaymentMode.upi;
-                          else if (_paymentMode == 'RTGS') pMode = PaymentMode.rtgs;
-                          else pMode = PaymentMode.online; 
+                          if (_paymentMode == 'Cash')
+                            pMode = PaymentMode.cash;
+                          else if (_paymentMode == 'UPI')
+                            pMode = PaymentMode.upi;
+                          else if (_paymentMode == 'RTGS')
+                            pMode = PaymentMode.rtgs;
+                          else
+                            pMode = PaymentMode.online;
                         } else {
                           pMode = PaymentMode.metal;
                         }
 
                         // Parse values
-                        double cashAmt = double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
+                        double cashAmt =
+                            double.tryParse(
+                              _amountController.text.replaceAll(',', ''),
+                            ) ??
+                            0.0;
                         double metalWt = 0.0;
-                        if (_category == 'Gold') metalWt = double.tryParse(_weightController.text) ?? 0.0;
-                        if (_category == 'Diamond') metalWt = double.tryParse(_caratController.text) ?? 0.0;
-                        
+                        if (_category == 'Gold')
+                          metalWt =
+                              double.tryParse(_weightController.text) ?? 0.0;
+                        if (_category == 'Diamond')
+                          metalWt =
+                              double.tryParse(_caratController.text) ?? 0.0;
+
                         String metalP = '';
-                        if (_category == 'Gold') metalP = _purityController.text;
-                        if (_category == 'Diamond') metalP = '${_piecesController.text} p';
+                        if (_category == 'Gold')
+                          metalP = _purityController.text;
+                        if (_category == 'Diamond')
+                          metalP = '${_piecesController.text} p';
 
                         final date = DateTime(
-                          _selectedDate.year, _selectedDate.month, _selectedDate.day,
-                          _selectedTime.hour, _selectedTime.minute,
+                          _selectedDate.year,
+                          _selectedDate.month,
+                          _selectedDate.day,
+                          _selectedTime.hour,
+                          _selectedTime.minute,
                         );
 
-                        final success = await ref.read(transactionNotifierProvider.notifier).createTransaction(
-                          partyId: _selectedParty!.id,
-                          partyName: _selectedParty!.name,
-                          partyPhone: _selectedParty!.phone,
-                          type: tType,
-                          paymentMode: pMode,
-                          cashAmount: cashAmt,
-                          metalType: _category == 'Money' ? '' : _category.toLowerCase(),
-                          metalWeight: metalWt,
-                          metalPurity: metalP,
-                          notes: _notesController.text,
-                          date: date,
-                        );
+                        final success = await ref
+                            .read(transactionNotifierProvider.notifier)
+                            .createTransaction(
+                              partyId: _selectedParty!.id,
+                              partyName: _selectedParty!.name,
+                              partyPhone: _selectedParty!.phone,
+                              type: tType,
+                              paymentMode: pMode,
+                              cashAmount: cashAmt,
+                              metalType: _category == 'Money'
+                                  ? ''
+                                  : _category.toLowerCase(),
+                              metalWeight: metalWt,
+                              metalPurity: metalP,
+                              notes: _notesController.text,
+                              date: date,
+                            );
 
                         if (success && mounted) {
                           // Switch to ledger screen
@@ -743,16 +943,22 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                           });
 
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Entry saved successfully')),
+                            const SnackBar(
+                              content: Text('Entry saved successfully'),
+                            ),
                           );
                         } else if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to save entry')),
+                            const SnackBar(
+                              content: Text('Failed to save entry'),
+                            ),
                           );
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
+                        padding: EdgeInsets.symmetric(
+                          vertical: isTablet ? 20 : 16,
+                        ),
                         backgroundColor: const Color(0xFFDCAE3D),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -762,15 +968,22 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check, color: Colors.black87, size: isTablet ? 24 : 20),
+                          Icon(
+                            Icons.check,
+                            color: Colors.black87,
+                            size: isTablet ? 24 : 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Save Entry',
-                            style: _textStyle(context, const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            )),
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -794,64 +1007,79 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
         optionsBuilder: (TextEditingValue textEditingValue) {
           final query = textEditingValue.text.trim().toLowerCase();
           final parties = ref.read(partiesStreamProvider).value ?? [];
-          
+
           if (query.isEmpty) {
-            final recent = parties.toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+            final recent = parties.toList()
+              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
             return recent.take(5);
           }
-          
+
           final matches = parties.where((party) {
-            return party.name.toLowerCase().contains(query) || party.phone.contains(query);
+            return party.name.toLowerCase().contains(query) ||
+                party.phone.contains(query);
           }).toList();
-          
+
           return matches;
         },
         displayStringForOption: (PartyModel option) => option.name,
         onSelected: (PartyModel selection) {
           setState(() => _selectedParty = selection);
         },
-        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-          return TextField(
-            controller: textEditingController,
-            focusNode: focusNode,
-            style: _textStyle(context, const TextStyle(fontSize: 15, color: Colors.black87)),
-            decoration: InputDecoration(
-              hintText: 'Search party name or phone...',
-              hintStyle: _textStyle(context, TextStyle(color: Colors.grey.shade500, fontSize: 15)),
-              prefixIcon: Icon(Icons.search, color: Colors.black54, size: isTablet ? 24 : 20),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: EdgeInsets.symmetric(
-                vertical: isTablet ? 18 : 14,
-                horizontal: 16,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade400),
-              ),
-              suffixIcon: _selectedParty != null || textEditingController.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, size: isTablet ? 24 : 20),
-                      onPressed: () {
-                        textEditingController.clear();
-                        setState(() => _selectedParty = null);
-                      },
-                    )
-                  : null,
-            ),
-            onSubmitted: (String value) {
-              onFieldSubmitted();
+        fieldViewBuilder:
+            (context, textEditingController, focusNode, onFieldSubmitted) {
+              return TextField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                style: _textStyle(
+                  context,
+                  const TextStyle(fontSize: 15, color: Colors.black87),
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Search party name or phone...',
+                  hintStyle: _textStyle(
+                    context,
+                    TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.black54,
+                    size: isTablet ? 24 : 20,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: isTablet ? 18 : 14,
+                    horizontal: 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  suffixIcon:
+                      _selectedParty != null ||
+                          textEditingController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, size: isTablet ? 24 : 20),
+                          onPressed: () {
+                            textEditingController.clear();
+                            setState(() => _selectedParty = null);
+                          },
+                        )
+                      : null,
+                ),
+                onSubmitted: (String value) {
+                  onFieldSubmitted();
+                },
+              );
             },
-          );
-        },
         optionsViewBuilder: (context, onSelected, options) {
           return Align(
             alignment: Alignment.topLeft,
@@ -875,7 +1103,10 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                 color: Colors.white,
                 clipBehavior: Clip.antiAlias,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: 250, maxWidth: constraints.maxWidth),
+                  constraints: BoxConstraints(
+                    maxHeight: 250,
+                    maxWidth: constraints.maxWidth,
+                  ),
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     shrinkWrap: true,
@@ -888,18 +1119,33 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                           radius: isTablet ? 24 : 20,
                           backgroundColor: const Color(0xFFF4EDE4),
                           child: Text(
-                            option.name.isNotEmpty ? option.name[0].toUpperCase() : '?',
-                            style: _textStyle(context, const TextStyle(
-                              color: Color(0xFF8A7311),
-                              fontWeight: FontWeight.bold,
-                            )),
+                            option.name.isNotEmpty
+                                ? option.name[0].toUpperCase()
+                                : '?',
+                            style: _textStyle(
+                              context,
+                              const TextStyle(
+                                color: Color(0xFF8A7311),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                        title: _buildHighlightText(option.name, _partyController.text, isTablet),
+                        title: _buildHighlightText(
+                          option.name,
+                          _partyController.text,
+                          isTablet,
+                        ),
                         subtitle: option.phone.isNotEmpty
                             ? Text(
                                 option.phone,
-                                style: _textStyle(context, const TextStyle(fontSize: 12, color: Colors.black54)),
+                                style: _textStyle(
+                                  context,
+                                  const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                  ),
+                                ),
                               )
                             : null,
                         onTap: () => onSelected(option),
@@ -919,28 +1165,49 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
     if (query.isEmpty) {
       return Text(
         text,
-        style: _textStyle(context, const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87)),
+        style: _textStyle(
+          context,
+          const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87),
+        ),
       );
     }
     final matchIndex = text.toLowerCase().indexOf(query.toLowerCase());
     if (matchIndex == -1) {
       return Text(
         text,
-        style: _textStyle(context, const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87)),
+        style: _textStyle(
+          context,
+          const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87),
+        ),
       );
     }
     return RichText(
       text: TextSpan(
         text: text.substring(0, matchIndex),
-        style: _textStyle(context, const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+        style: _textStyle(
+          context,
+          const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+        ),
         children: [
           TextSpan(
             text: text.substring(matchIndex, matchIndex + query.length),
-            style: _textStyle(context, const TextStyle(color: Color(0xFFDCAE3D), fontWeight: FontWeight.bold)),
+            style: _textStyle(
+              context,
+              const TextStyle(
+                color: Color(0xFFDCAE3D),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           TextSpan(
             text: text.substring(matchIndex + query.length),
-            style: _textStyle(context, const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+            style: _textStyle(
+              context,
+              const TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
@@ -954,7 +1221,7 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -968,22 +1235,29 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                     color: Colors.black.withOpacity(0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ]
               : [],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? selectedColor : Colors.black54, size: isTablet ? 22 : 18),
+            Icon(
+              icon,
+              color: isSelected ? selectedColor : Colors.black54,
+              size: isTablet ? 22 : 18,
+            ),
             SizedBox(width: isTablet ? 10 : 8),
             Text(
               title,
-              style: _textStyle(context, TextStyle(
-                color: isSelected ? selectedColor : Colors.black54,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                fontSize: 14,
-              )),
+              style: _textStyle(
+                context,
+                TextStyle(
+                  color: isSelected ? selectedColor : Colors.black54,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ],
         ),
@@ -993,7 +1267,7 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
 
   Widget _buildCategoryButton(String category) {
     final isSelected = _category == category;
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _category = category),
@@ -1008,18 +1282,21 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
-                    )
+                    ),
                   ]
                 : [],
           ),
           child: Center(
             child: Text(
               category,
-              style: _textStyle(context, TextStyle(
-                color: isSelected ? const Color(0xFF8A7311) : Colors.black54,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                fontSize: 14,
-              )),
+              style: _textStyle(
+                context,
+                TextStyle(
+                  color: isSelected ? const Color(0xFF8A7311) : Colors.black54,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ),
         ),
@@ -1029,7 +1306,7 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
 
   Widget _buildPaymentModeChip(String mode) {
     final isSelected = _paymentMode == mode;
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
     return GestureDetector(
       onTap: () => setState(() => _paymentMode = mode),
       child: Container(
@@ -1046,11 +1323,14 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
         ),
         child: Text(
           mode,
-          style: _textStyle(context, TextStyle(
-            color: isSelected ? const Color(0xFF8A7311) : Colors.black87,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            fontSize: 13,
-          )),
+          style: _textStyle(
+            context,
+            TextStyle(
+              color: isSelected ? const Color(0xFF8A7311) : Colors.black87,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              fontSize: 13,
+            ),
+          ),
         ),
       ),
     );
@@ -1061,7 +1341,7 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
     required String text,
     required VoidCallback onTap,
   }) {
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -1089,11 +1369,14 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
             SizedBox(width: isTablet ? 8 : 6),
             Text(
               text,
-              style: _textStyle(context, TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade800,
-              )),
+              style: _textStyle(
+                context,
+                TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade800,
+                ),
+              ),
             ),
           ],
         ),
@@ -1105,7 +1388,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
 class _IndianCurrencyFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.text.isEmpty) {
       return newValue.copyWith(text: '');
     }

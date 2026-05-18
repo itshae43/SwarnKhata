@@ -1,14 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import 'firebase_options.dart';
 import 'features/navigation/presentation/screens/auth_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const ProviderScope(child: SwarnKhataApp()));
 }
 
@@ -24,7 +24,29 @@ class SwarnKhataApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD4B13B)),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFFFF8F0),
+        textTheme: GoogleFonts.montserratTextTheme(),
       ),
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        final isTablet = AppResponsive.isTablet(context);
+        final textScale = AppResponsive.tabletTextScale(context);
+        final appChild = child ?? const SizedBox.shrink();
+
+        return MediaQuery(
+          data: isTablet
+              ? mediaQuery.copyWith(textScaler: TextScaler.linear(textScale))
+              : mediaQuery,
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              visualDensity: AppResponsive.visualDensity(context),
+              materialTapTargetSize: isTablet
+                  ? MaterialTapTargetSize.shrinkWrap
+                  : MaterialTapTargetSize.padded,
+            ),
+            child: appChild,
+          ),
+        );
+      },
       home: const AuthWrapper(),
     );
   }

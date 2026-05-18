@@ -5,12 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/core/models/user_model.dart';
 import 'package:swarn_khata/core/models/party_model.dart';
 import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
 import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
 import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
 import 'package:swarn_khata/features/parties/providers/party_providers.dart';
 import 'package:swarn_khata/features/parties/presentation/widgets/quick_add_party_bottom_sheet.dart';
 import 'package:intl/intl.dart';
+import 'package:swarn_khata/features/home/presentation/screens/statement_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -20,35 +22,130 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // Balances will be fetched from Firestore in future iterations
-  final String totalCash = '₹4,52,000';
-  final String onlineBalance = '₹12,85,000';
-  final String goldBalance = '4,250 g';
-  final String diamondBalance = '15.5 ct';
-
-  // Today's Summary Data (for Mobile View)
-  final String todayIn = '+₹45,000';
-  final String todayOut = '-₹12,000';
-
   // Search query state for Tablet Transaction Table
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  String _selectedTableFilter = 'All'; // Default is 'All'
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  PopupMenuItem<String> _buildFilterMenuItem(String value, String label, IconData icon) {
+    final isSelected = _selectedTableFilter == value;
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isSelected ? const Color(0xFF735C0F) : const Color(0xFF5E543F).withOpacity(0.7),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? const Color(0xFF735C0F) : Colors.black87,
+            ),
+          ),
+          if (isSelected) ...[
+            const Spacer(),
+            const Icon(
+              Icons.check_rounded,
+              size: 16,
+              color: Color(0xFF735C0F),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
+    final transactionsAsync = ref.watch(transactionsStreamProvider);
+    final transactions = transactionsAsync.value ?? [];
 
-    if (isTablet) {
-      return _buildTabletHomeScreen();
+    // Calculate balances dynamically
+    double cashVal = 0.0;
+    double onlineVal = 0.0;
+    double goldVal = 0.0;
+    double diamondVal = 0.0;
+
+    for (final t in transactions) {
+      final isCredit = t.type == TransactionType.receipt || t.type == TransactionType.metalIn;
+      final isDebit = t.type == TransactionType.payment || t.type == TransactionType.metalOut;
+      final val = t.metalType.isEmpty ? t.cashAmount : t.metalWeight;
+
+      if (t.metalType.isEmpty) {
+        if (t.paymentMode == PaymentMode.cash) {
+          if (isCredit) cashVal += val;
+          if (isDebit) cashVal -= val;
+        } else if (t.paymentMode == PaymentMode.online ||
+                   t.paymentMode == PaymentMode.upi ||
+                   t.paymentMode == PaymentMode.rtgs) {
+          if (isCredit) onlineVal += val;
+          if (isDebit) onlineVal -= val;
+        }
+      } else if (t.metalType == 'gold') {
+        if (isCredit) goldVal += val;
+        if (isDebit) goldVal -= val;
+      } else if (t.metalType == 'diamond') {
+        if (isCredit) diamondVal += val;
+        if (isDebit) diamondVal -= val;
+      }
     }
 
-    // Existing mobile layout remains completely untouched!
+    final String displayCash = '₹ ${NumberFormat.decimalPattern('en_IN').format(cashVal)}';
+    final String displayOnline = '₹ ${NumberFormat.decimalPattern('en_IN').format(onlineVal)}';
+    final String displayGold = '${goldVal % 1 == 0 ? goldVal.toInt().toString() : goldVal.toStringAsFixed(3).replaceAll(RegExp(r"\.?0+$"), "")} g';
+    final String displayDiamond = '${diamondVal % 1 == 0 ? diamondVal.toInt().toString() : diamondVal.toStringAsFixed(2).replaceAll(RegExp(r"\.?0+$"), "")} ct';
+
+    // Today's summary for Mobile
+    double todayInVal = 0.0;
+    double todayOutVal = 0.0;
+    final now = DateTime.now();
+    for (final t in transactions) {
+      if (t.date.year == now.year && t.date.month == now.month && t.date.day == now.day) {
+        if (t.metalType.isEmpty) {
+          if (t.type == TransactionType.receipt) {
+            todayInVal += t.cashAmount;
+          } else if (t.type == TransactionType.payment) {
+            todayOutVal += t.cashAmount;
+          }
+        }
+      }
+    }
+    final String displayTodayIn = '+₹ ${NumberFormat.decimalPattern('en_IN').format(todayInVal)}';
+    final String displayTodayOut = '-₹ ${NumberFormat.decimalPattern('en_IN').format(todayOutVal)}';
+
+    if (isTablet) {
+      return _buildTabletHomeScreen(
+        transactionsAsync: transactionsAsync,
+        cash: displayCash,
+        online: displayOnline,
+        gold: displayGold,
+        diamond: displayDiamond,
+      );
+    }
+
+    // Existing mobile layout
     return Container(
       color: const Color(0xFFFDFBF7),
       child: SafeArea(
@@ -60,9 +157,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               _buildProfileHeader(),
               const SizedBox(height: 24),
-              _buildBalancesGrid(),
+              _buildBalancesGrid(
+                cash: displayCash,
+                online: displayOnline,
+                gold: displayGold,
+                diamond: displayDiamond,
+              ),
               const SizedBox(height: 24),
-              _buildTodaysSummary(),
+              _buildTodaysSummary(
+                todayIn: displayTodayIn,
+                todayOut: displayTodayOut,
+              ),
               const SizedBox(height: 24),
               _buildRecentTransactions(),
               const SizedBox(height: 80), // Padding for bottom FAB
@@ -74,19 +179,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // ==========================================
-  // TABLET SCREEN LAYOUT (PIXEL-PERFECT REPLICATION)
+  // TABLET SCREEN LAYOUT
   // ==========================================
 
-  Widget _buildTabletHomeScreen() {
-    final transactionsAsync = ref.watch(transactionsStreamProvider);
+  Widget _buildTabletHomeScreen({
+    required AsyncValue<List<TransactionModel>> transactionsAsync,
+    required String cash,
+    required String online,
+    required String gold,
+    required String diamond,
+  }) {
     final dateStr = DateFormat('EEEE, d MMMM').format(DateTime.now());
+
 
     return Container(
       color: const Color(0xFFFAF6EE), // Beautiful warm beige/cream background
       child: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 32.0), // Increased from 24
+          padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -97,9 +208,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Text(
                     dateStr,
                     style: GoogleFonts.montserrat(
-                      fontSize: 30, // Increased from 24
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF735C0F), // Olive-gold text matching the screenshot
+                      color: const Color(
+                        0xFF735C0F,
+                      ), // Olive-gold text matching the screenshot
                     ),
                   ),
                   ElevatedButton.icon(
@@ -113,20 +226,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.add, color: Color(0xFF01565B), size: 20), // Increased from 18
+                    icon: const Icon(
+                      Icons.add,
+                      color: Color(0xFF01565B),
+                      size: 18,
+                    ),
                     label: Text(
                       'New Entry',
                       style: GoogleFonts.montserrat(
                         color: const Color(0xFF01565B),
                         fontWeight: FontWeight.bold,
-                        fontSize: 16, // Increased from 14
+                        fontSize: 14,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDFBA6B), // Gold background
+                      backgroundColor: const Color(
+                        0xFFDFBA6B,
+                      ), // Gold background
                       elevation: 2,
                       shadowColor: Colors.black.withOpacity(0.1),
-                      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16), // Increased from 20, 14
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -134,11 +256,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 32), // Increased from 24
+              const SizedBox(height: 24),
 
               // Summary Cards Grid (4 Cards Row)
-              _buildTabletSummaryCards(),
-              const SizedBox(height: 36), // Increased from 28
+              _buildTabletSummaryCards(
+                cash: cash,
+                online: online,
+                gold: gold,
+                diamond: diamond,
+              ),
+              const SizedBox(height: 28),
 
               // Recent Transactions Table inside a beautifully styled Card
               _buildTabletTransactionsTable(transactionsAsync),
@@ -149,8 +276,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildTabletSummaryCards() {
-    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+  Widget _buildTabletSummaryCards({
+    required String cash,
+    required String online,
+    required String gold,
+    required String diamond,
+  }) {
+    final isPortrait =
+        MediaQuery.of(context).orientation == Orientation.portrait;
 
     if (isPortrait) {
       return Column(
@@ -160,48 +293,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Expanded(
                 child: _buildTabletCard(
                   label: 'TOTAL CASH',
-                  value: totalCash,
+                  value: cash,
                   accentColor: const Color(0xFF01565B),
                   icon: Icons.payments_outlined,
                   iconColor: const Color(0xFF01565B),
                   iconBgColor: const Color(0xFFE8F8F0),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TransactionStatementScreen(category: 'cash'),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 16),
               Expanded(
                 child: _buildTabletCard(
                   label: 'TOTAL UPI/RTGS',
-                  value: onlineBalance,
+                  value: online,
                   accentColor: const Color(0xFF2E5BFF),
                   icon: Icons.account_balance_rounded,
                   iconColor: const Color(0xFF2E5BFF),
                   iconBgColor: const Color(0xFFE6F0FA),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TransactionStatementScreen(category: 'online'),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _buildTabletCard(
                   label: 'TOTAL GOLD',
-                  value: goldBalance,
+                  value: gold,
                   accentColor: const Color(0xFFDFBA6B),
                   icon: Icons.widgets_rounded,
                   iconColor: const Color(0xFF735C0F),
                   iconBgColor: const Color(0xFFFFF9E6),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TransactionStatementScreen(category: 'gold'),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 16),
               Expanded(
                 child: _buildTabletCard(
                   label: 'TOTAL DIAMOND',
-                  value: diamondBalance,
+                  value: diamond,
                   accentColor: const Color(0xFF8EACCD),
                   icon: Icons.diamond_rounded,
                   iconColor: const Color(0xFF4F709C),
                   iconBgColor: const Color(0xFFE3EDF7),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TransactionStatementScreen(category: 'diamond'),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -215,44 +372,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Expanded(
           child: _buildTabletCard(
             label: 'TOTAL CASH',
-            value: totalCash,
+            value: cash,
             accentColor: const Color(0xFF01565B),
             icon: Icons.payments_outlined,
             iconColor: const Color(0xFF01565B),
             iconBgColor: const Color(0xFFE8F8F0),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TransactionStatementScreen(category: 'cash'),
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: 20), // Increased from 16
+        const SizedBox(width: 16),
         Expanded(
           child: _buildTabletCard(
             label: 'TOTAL UPI/RTGS',
-            value: onlineBalance,
+            value: online,
             accentColor: const Color(0xFF2E5BFF),
             icon: Icons.account_balance_rounded,
             iconColor: const Color(0xFF2E5BFF),
             iconBgColor: const Color(0xFFE6F0FA),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TransactionStatementScreen(category: 'online'),
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: 20), // Increased from 16
+        const SizedBox(width: 16),
         Expanded(
           child: _buildTabletCard(
             label: 'TOTAL GOLD',
-            value: goldBalance,
+            value: gold,
             accentColor: const Color(0xFFDFBA6B),
             icon: Icons.widgets_rounded,
             iconColor: const Color(0xFF735C0F),
             iconBgColor: const Color(0xFFFFF9E6),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TransactionStatementScreen(category: 'gold'),
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: 20), // Increased from 16
+        const SizedBox(width: 16),
         Expanded(
           child: _buildTabletCard(
             label: 'TOTAL DIAMOND',
-            value: diamondBalance,
+            value: diamond,
             accentColor: const Color(0xFF8EACCD),
             icon: Icons.diamond_rounded,
             iconColor: const Color(0xFF4F709C),
             iconBgColor: const Color(0xFFE3EDF7),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TransactionStatementScreen(category: 'diamond'),
+              ),
+            ),
           ),
         ),
       ],
@@ -266,96 +447,135 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required IconData icon,
     required Color iconColor,
     required Color iconBgColor,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      height: 120, // Increased height from 100 to 120
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5DEC9).withOpacity(0.5), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 104,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFE5DEC9).withOpacity(0.5),
+            width: 1.5,
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Row(
-        children: [
-          // Left colored accent strip
-          Container(
-            width: 4,
-            color: accentColor,
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14), // Increased from 16, 12
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        label,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 13, // Increased from 10
-                          color: const Color(0xFF5E543F).withOpacity(0.8),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            // Left colored accent strip
+            Container(width: 4, color: accentColor),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          label,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 11,
+                            color: const Color(0xFF5E543F).withOpacity(0.8),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(8), // Increased from 6
-                        decoration: BoxDecoration(
-                          color: iconBgColor,
-                          shape: BoxShape.circle,
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: iconBgColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(icon, color: iconColor, size: 16),
                         ),
-                        child: Icon(icon, color: iconColor, size: 20), // Increased from 16
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        value,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 26, // Increased from 20
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          value,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 21,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
-                      ),
-                      Container(
-                        width: 30, // Increased from 24
-                        height: 30, // Increased from 24
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF01565B).withOpacity(0.3)),
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF01565B).withOpacity(0.3),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFF01565B),
+                            size: 16,
+                          ),
                         ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Color(0xFF01565B),
-                          size: 20, // Increased from 16
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTabletTransactionsTable(AsyncValue<List<TransactionModel>> transactionsAsync) {
-    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+  Widget _buildTabletTransactionsTable(
+    AsyncValue<List<TransactionModel>> transactionsAsync,
+  ) {
+    final transactions = transactionsAsync.value ?? [];
+    final now = DateTime.now();
+
+    // 1. Date filter
+    final dateFilteredTransactions = transactions.where((t) {
+      if (_selectedTableFilter == 'Today') {
+        return t.date.year == now.year &&
+            t.date.month == now.month &&
+            t.date.day == now.day;
+      } else if (_selectedTableFilter == 'This Week') {
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final startOfToday = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+        final txnDate = DateTime(t.date.year, t.date.month, t.date.day);
+        return txnDate.isAfter(startOfToday.subtract(const Duration(days: 1))) &&
+            txnDate.isBefore(DateTime(now.year, now.month, now.day).add(const Duration(days: 1)));
+      } else if (_selectedTableFilter == 'This Month') {
+        return t.date.year == now.year && t.date.month == now.month;
+      }
+      return true;
+    }).toList();
+
+    // 2. Search query filter
+    final filtered = dateFilteredTransactions.where((t) {
+      final query = _searchQuery.toLowerCase().trim();
+      if (query.isEmpty) return true;
+      return t.partyName.toLowerCase().contains(query) ||
+          (t.notes?.toLowerCase().contains(query) ?? false) ||
+          t.metalType.toLowerCase().contains(query);
+    }).toList();
+
+    final isPortrait =
+        MediaQuery.of(context).orientation == Orientation.portrait;
     final int dateFlex = 2;
     final int nameFlex = isPortrait ? 4 : 3;
     final int categoryFlex = 2;
@@ -366,7 +586,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5DEC9).withOpacity(0.5), width: 1.5),
+        border: Border.all(
+          color: const Color(0xFFE5DEC9).withOpacity(0.5),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
@@ -380,78 +603,162 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           // Table Title, Search Bar and Filter row
           Padding(
-            padding: const EdgeInsets.all(20.0), // Increased from 16
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Recent Transaction',
                   style: GoogleFonts.montserrat(
-                    fontSize: 24, // Increased from 18
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF01565B),
                   ),
                 ),
                 Row(
                   children: [
-                    // Search Field
-                    Container(
-                      width: 280, // Increased from 240
-                      height: 46, // Increased from 38
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAF6EE),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE5DEC9)),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val;
-                          });
-                        },
-                        style: GoogleFonts.montserrat(fontSize: 15),
-                        textAlignVertical: TextAlignVertical.center,
-                        decoration: InputDecoration(
-                          hintText: 'Search',
-                          hintStyle: GoogleFonts.montserrat(
-                            color: const Color(0xFF5E543F).withOpacity(0.6),
-                            fontSize: 15,
+                    // Collapsible Search Field
+                    GestureDetector(
+                      onTap: () {
+                        if (!_searchFocusNode.hasFocus) {
+                          _searchFocusNode.requestFocus();
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOutCubic,
+                        width: (_searchFocusNode.hasFocus || _searchQuery.isNotEmpty) ? 240.0 : 40.0,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAF6EE),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE5DEC9)),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          onChanged: (val) {
+                            setState(() {
+                              _searchQuery = val;
+                            });
+                          },
+                          style: GoogleFonts.montserrat(fontSize: 13),
+                          textAlignVertical: TextAlignVertical.center,
+                          decoration: InputDecoration(
+                            hintText: (_searchFocusNode.hasFocus || _searchQuery.isNotEmpty) ? 'Search' : '',
+                            hintStyle: GoogleFonts.montserrat(
+                              color: const Color(0xFF5E543F).withOpacity(0.6),
+                              fontSize: 13,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              size: 18,
+                              color: Color(0xFF5E543F),
+                            ),
+                            suffixIcon: (_searchFocusNode.hasFocus && _searchQuery.isNotEmpty)
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF5E543F)),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = '';
+                                      });
+                                      _searchFocusNode.unfocus();
+                                    },
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ),
                           ),
-                          prefixIcon: const Icon(
-                            Icons.search_rounded,
-                            size: 20,
-                            color: Color(0xFF5E543F),
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16), // Increased from 12
+                    const SizedBox(width: 12),
                     // Filter Button
-                    Container(
-                      height: 46, // Increased from 38
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAF6EE),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE5DEC9)),
-                      ),
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.filter_list_rounded, size: 20, color: Color(0xFF5E543F)), // Increased from 18
-                        label: Text(
-                          'Filter',
-                          style: GoogleFonts.montserrat(
-                            color: const Color(0xFF5E543F),
-                            fontSize: 15, // Increased from 13
-                            fontWeight: FontWeight.bold,
-                          ),
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        setState(() {
+                          _selectedTableFilter = value;
+                        });
+                      },
+                      itemBuilder: (context) => [
+                        _buildFilterMenuItem('All', 'All', Icons.all_inclusive_rounded),
+                        _buildFilterMenuItem('Today', 'Today', Icons.today_rounded),
+                        _buildFilterMenuItem('This Week', 'This Week', Icons.date_range_rounded),
+                        _buildFilterMenuItem('This Month', 'This Month', Icons.calendar_month_rounded),
+                      ],
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAF6EE),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE5DEC9)),
                         ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide.none,
-                          padding: const EdgeInsets.symmetric(horizontal: 20), // Increased from 16
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.filter_list_rounded,
+                              size: 18,
+                              color: Color(0xFF5E543F),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Filter: $_selectedTableFilter',
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF5E543F),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Print Button
+                    GestureDetector(
+                      onTap: () {
+                        _showPrintStatementDialog(
+                          context,
+                          filtered,
+                          'SwarnKhata Statement',
+                          'Period: $_selectedTableFilter',
+                        );
+                      },
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAF6EE),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE5DEC9)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.print_rounded,
+                              size: 18,
+                              color: Color(0xFF735C0F),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Print',
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF735C0F),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -463,7 +770,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           // Table Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16), // Increased from 24, 12
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             color: const Color(0xFFFAF6EE),
             child: Row(
               children: [
@@ -472,10 +779,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Text(
                     'DATE',
                     style: GoogleFonts.montserrat(
-                      fontSize: 13, // Increased from 12
-                      fontWeight: FontWeight.w600, // Increased weight
-                      height: 16 / 13,
-                      letterSpacing: 13 * 0.08,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 16 / 12,
+                      letterSpacing: 12 * 0.08,
                       color: const Color(0xFF5E543F),
                     ),
                   ),
@@ -485,10 +792,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Text(
                     'CUSTOMER NAME',
                     style: GoogleFonts.montserrat(
-                      fontSize: 13, // Increased from 12
-                      fontWeight: FontWeight.w600, // Increased weight
-                      height: 16 / 13,
-                      letterSpacing: 13 * 0.08,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 16 / 12,
+                      letterSpacing: 12 * 0.08,
                       color: const Color(0xFF5E543F),
                     ),
                   ),
@@ -498,10 +805,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Text(
                     'CATEGORY',
                     style: GoogleFonts.montserrat(
-                      fontSize: 13, // Increased from 12
-                      fontWeight: FontWeight.w600, // Increased weight
-                      height: 16 / 13,
-                      letterSpacing: 13 * 0.08,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 16 / 12,
+                      letterSpacing: 12 * 0.08,
                       color: const Color(0xFF5E543F),
                     ),
                   ),
@@ -511,10 +818,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Text(
                     'AMOUNT',
                     style: GoogleFonts.montserrat(
-                      fontSize: 13, // Increased from 12
-                      fontWeight: FontWeight.w600, // Increased weight
-                      height: 16 / 13,
-                      letterSpacing: 13 * 0.08,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 16 / 12,
+                      letterSpacing: 12 * 0.08,
                       color: const Color(0xFF5E543F),
                     ),
                   ),
@@ -524,10 +831,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Text(
                     'NOTES',
                     style: GoogleFonts.montserrat(
-                      fontSize: 13, // Increased from 12
-                      fontWeight: FontWeight.w600, // Increased weight
-                      height: 16 / 13,
-                      letterSpacing: 13 * 0.08,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 16 / 12,
+                      letterSpacing: 12 * 0.08,
                       color: const Color(0xFF5E543F),
                     ),
                   ),
@@ -539,35 +846,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Transaction Rows & Dynamic Calculations
           transactionsAsync.when(
             data: (transactions) {
-              // Filter to get only today's transactions!
-              final now = DateTime.now();
-              final todayTransactions = transactions.where((t) {
-                return t.date.year == now.year &&
-                       t.date.month == now.month &&
-                       t.date.day == now.day;
-              }).toList();
-
-              // Search query filter
-              final filtered = todayTransactions.where((t) {
-                final query = _searchQuery.toLowerCase().trim();
-                if (query.isEmpty) return true;
-                return t.partyName.toLowerCase().contains(query) ||
-                       (t.notes?.toLowerCase().contains(query) ?? false) ||
-                       t.metalType.toLowerCase().contains(query);
-              }).toList();
-
+              // Using pre-filtered transactions list from outer scope of _buildTabletHomeScreen
               if (filtered.isEmpty) {
                 return Container(
-                  height: 180, // Increased from 160
+                  height: 160,
                   alignment: Alignment.center,
                   child: Text(
-                    todayTransactions.isEmpty 
-                        ? 'No transactions recorded today' 
+                    transactions.isEmpty
+                        ? 'No transactions recorded'
                         : 'No matching transactions found',
                     style: GoogleFonts.montserrat(
-                      fontSize: 16, // Increased from 14
+                      fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      height: 20 / 16,
+                      height: 20 / 14,
                       letterSpacing: 0,
                       color: const Color(0xFF5E543F).withOpacity(0.6),
                     ),
@@ -580,36 +871,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Increased from 12, 12
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     itemCount: filtered.length,
-                    separatorBuilder: (context, index) => const Divider(color: Color(0xFFE5DEC9), height: 24, thickness: 1.2),
+                    separatorBuilder: (context, index) => const Divider(
+                      color: Color(0xFFE5DEC9),
+                      height: 24,
+                      thickness: 1.2,
+                    ),
                     itemBuilder: (context, index) {
                       final t = filtered[index];
-                      final isCredit = t.type == TransactionType.receipt || t.type == TransactionType.metalIn;
+                      final isCredit =
+                          t.type == TransactionType.receipt ||
+                          t.type == TransactionType.metalIn;
                       final dateStr = DateFormat('dd MMM, yyyy').format(t.date);
                       final timeStr = DateFormat('hh:mm a').format(t.date);
-                      
+
                       // Customer Avatar color based on initials/name
-                      final initial = t.partyName.isNotEmpty ? t.partyName[0].toUpperCase() : '?';
+                      final initial = t.partyName.isNotEmpty
+                          ? t.partyName[0].toUpperCase()
+                          : '?';
                       final avatarBgColor = _getAvatarColorForName(t.partyName);
 
                       // Category Pill using Transaction Type / Badge specs
                       Widget categoryPill;
                       if (t.metalType.isEmpty) {
-                        categoryPill = _buildCategoryPill('Cash', const Color(0xFFE8F8F0), const Color(0xFF00994C));
+                        categoryPill = _buildCategoryPill(
+                          'Cash',
+                          const Color(0xFFE8F8F0),
+                          const Color(0xFF00994C),
+                        );
                       } else if (t.metalType == 'gold') {
-                        categoryPill = _buildCategoryPill('Gold', const Color(0xFFFFF9E6), const Color(0xFFB38600));
+                        categoryPill = _buildCategoryPill(
+                          'Gold',
+                          const Color(0xFFFFF9E6),
+                          const Color(0xFFB38600),
+                        );
                       } else {
-                        categoryPill = _buildCategoryPill('Diamond', const Color(0xFFE6F0FA), const Color(0xFF0066CC));
+                        categoryPill = _buildCategoryPill(
+                          'Diamond',
+                          const Color(0xFFE6F0FA),
+                          const Color(0xFF0066CC),
+                        );
                       }
 
                       // Amount
                       String amountStr = '';
-                      final amountColor = isCredit ? const Color(0xFF01565B) : const Color(0xFFC62828);
+                      final amountColor = isCredit
+                          ? const Color(0xFF01565B)
+                          : const Color(0xFFC62828);
                       final sign = isCredit ? '+ ' : '- ';
 
                       if (t.metalType.isEmpty) {
-                        amountStr = '$sign₹ ${NumberFormat.decimalPattern('en_IN').format(t.cashAmount)}';
+                        amountStr =
+                            '$sign₹ ${NumberFormat.decimalPattern('en_IN').format(t.cashAmount)}';
                       } else if (t.metalType == 'gold') {
                         amountStr = '$sign${t.metalWeight} g';
                       } else {
@@ -617,7 +934,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       }
 
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Adjusted vertical padding to pair with new divider height
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ), // Adjusted vertical padding to pair with new divider height
                         child: Row(
                           children: [
                             // DATE Column (Styled with Timestamp Spec)
@@ -629,21 +949,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   Text(
                                     dateStr,
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 14, // Increased from 12
-                                      fontWeight: FontWeight.w500, // Stronger weight
-                                      height: 16 / 14,
-                                      letterSpacing: 14 * 0.01,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      height: 16 / 12,
+                                      letterSpacing: 12 * 0.01,
                                       color: Colors.black87,
                                     ),
                                   ),
-                                  const SizedBox(height: 4), // Increased from 2
+                                  const SizedBox(height: 2),
                                   Text(
                                     timeStr,
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 13, // Increased from 12
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w400,
-                                      height: 16 / 13,
-                                      letterSpacing: 13 * 0.01,
+                                      height: 16 / 12,
+                                      letterSpacing: 12 * 0.01,
                                       color: Colors.black54,
                                     ),
                                   ),
@@ -657,8 +977,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               child: Row(
                                 children: [
                                   Container(
-                                    width: 40, // Increased from 32
-                                    height: 40, // Increased from 32
+                                    width: 34,
+                                    height: 34,
                                     decoration: BoxDecoration(
                                       color: avatarBgColor,
                                       shape: BoxShape.circle,
@@ -667,26 +987,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     child: Text(
                                       initial,
                                       style: GoogleFonts.montserrat(
-                                        fontSize: 16, // Increased from 14
+                                        fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        height: 20 / 16,
+                                        height: 20 / 14,
                                         color: Colors.white,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12), // Increased from 10
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       t.partyName,
                                       style: GoogleFonts.montserrat(
-                                        fontSize: 18, // Increased from 16
+                                        fontSize: 16,
                                         fontWeight: FontWeight.w700,
-                                        height: 22 / 18,
+                                        height: 22 / 16,
                                         letterSpacing: 0,
                                         color: Colors.black87,
                                       ),
                                       maxLines: isPortrait ? null : 1,
-                                      overflow: isPortrait ? null : TextOverflow.ellipsis,
+                                      overflow: isPortrait
+                                          ? null
+                                          : TextOverflow.ellipsis,
                                       softWrap: true,
                                     ),
                                   ),
@@ -713,46 +1035,85 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   Text(
                                     amountStr,
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 18, // Increased from 15
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w700,
-                                      height: 20 / 18,
+                                      height: 20 / 15,
                                       letterSpacing: 0,
                                       color: amountColor,
                                     ),
                                   ),
-                                  if (t.metalType == 'gold' && t.metalPurity.isNotEmpty) ...[
-                                    const SizedBox(height: 4), // Increased from 2
-                                    Text(
-                                      t.metalPurity.endsWith('%') ? t.metalPurity : '${t.metalPurity}%',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 14, // Increased from 13
-                                        fontWeight: FontWeight.w400,
-                                        height: 18 / 14,
-                                        letterSpacing: 0,
-                                        color: Colors.black54,
+                                  if (t.metalType == 'gold' &&
+                                      t.metalPurity.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFAF6EE),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: const Color(0xFFE5DEC9),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        t.metalPurity.endsWith('%') || t.metalPurity.contains('Purity')
+                                            ? t.metalPurity
+                                            : '${t.metalPurity}% Purity',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF735C0F),
+                                        ),
                                       ),
                                     ),
                                   ],
-                                  if (t.metalType == 'diamond' && t.metalPurity.isNotEmpty) ...[
-                                    const SizedBox(height: 4), // Increased from 2
-                                    Builder(builder: (context) {
-                                      String displayPieces = t.metalPurity;
-                                      if (displayPieces.endsWith(' p')) {
-                                        displayPieces = displayPieces.replaceAll(' p', ' pcs');
-                                      } else if (!displayPieces.contains('pcs') && !displayPieces.contains('p')) {
-                                        displayPieces = '$displayPieces pcs';
-                                      }
-                                      return Text(
-                                        displayPieces,
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 14, // Increased from 13
-                                          fontWeight: FontWeight.w400,
-                                          height: 18 / 14,
-                                          letterSpacing: 0,
-                                          color: Colors.black54,
-                                        ),
-                                      );
-                                    }),
+                                  if (t.metalType == 'diamond' &&
+                                      t.metalPurity.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Builder(
+                                      builder: (context) {
+                                        String displayPieces = t.metalPurity;
+                                        if (displayPieces.endsWith(' p')) {
+                                          displayPieces = displayPieces
+                                              .replaceAll(' p', ' Pcs');
+                                        } else if (!displayPieces.contains(
+                                              'Pcs',
+                                            ) &&
+                                            !displayPieces.contains(
+                                              'pcs',
+                                            ) &&
+                                            !displayPieces.contains('p')) {
+                                          displayPieces = '$displayPieces Pcs';
+                                        } else if (displayPieces.contains('pcs')) {
+                                          displayPieces = displayPieces.replaceAll('pcs', 'Pcs');
+                                        }
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFAF6EE),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: const Color(0xFFE5DEC9),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            displayPieces,
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF735C0F),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ],
                                 ],
                               ),
@@ -762,16 +1123,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Expanded(
                               flex: notesFlex,
                               child: Text(
-                                t.notes != null && t.notes!.trim().isNotEmpty ? t.notes! : '-',
+                                t.notes != null && t.notes!.trim().isNotEmpty
+                                    ? t.notes!
+                                    : '-',
                                 style: GoogleFonts.montserrat(
-                                  fontSize: 14, // Increased from 13
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w400,
-                                  height: 18 / 14,
+                                  height: 18 / 13,
                                   letterSpacing: 0,
                                   color: Colors.black54,
                                 ),
                                 maxLines: isPortrait ? null : 1,
-                                overflow: isPortrait ? null : TextOverflow.ellipsis,
+                                overflow: isPortrait
+                                    ? null
+                                    : TextOverflow.ellipsis,
                                 softWrap: true,
                               ),
                             ),
@@ -780,12 +1145,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       );
                     },
                   ),
-
                 ],
               );
             },
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
-            error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Error loading transactions'))),
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Error loading transactions'),
+              ),
+            ),
           ),
         ],
       ),
@@ -794,7 +1168,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildCategoryPill(String label, Color bgColor, Color textColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // Increased from 10, 4
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
@@ -802,10 +1176,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Text(
         label,
         style: GoogleFonts.montserrat(
-          fontSize: 14, // Increased from 13
+          fontSize: 13,
           fontWeight: FontWeight.w500,
-          height: 18 / 14,
-          letterSpacing: 14 * 0.02,
+          height: 18 / 13,
+          letterSpacing: 13 * 0.02,
           color: textColor,
         ),
       ),
@@ -844,10 +1218,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           padding: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color(0xFF8A7311),
-              width: 1.5,
-            ),
+            border: Border.all(color: const Color(0xFF8A7311), width: 1.5),
           ),
           child: CircleAvatar(
             radius: 20,
@@ -886,7 +1257,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildBalancesGrid() {
+  Widget _buildBalancesGrid({
+    required String cash,
+    required String online,
+    required String gold,
+    required String diamond,
+  }) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -895,70 +1271,128 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 1.4,
       children: [
-        _buildGridCard('Total Cash', totalCash, Icons.account_balance_wallet_outlined, const Color(0xFFF9F6ED), const Color(0xFFB08900)),
-        _buildGridCard('Online Balance', onlineBalance, Icons.account_balance_outlined, const Color(0xFFF9F6ED), const Color(0xFFB08900)),
-        _buildGridCard('Gold Balance', goldBalance, Icons.widgets_outlined, const Color(0xFFE8C73D), const Color(0xFF4A3E1F)),
-        _buildGridCard('Diamond Balance', diamondBalance, Icons.diamond_outlined, const Color(0xFFE3EDF7), const Color(0xFF5B81A8)),
+        _buildGridCard(
+          'Total Cash',
+          cash,
+          Icons.account_balance_wallet_outlined,
+          const Color(0xFFF9F6ED),
+          const Color(0xFFB08900),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TransactionStatementScreen(category: 'cash'),
+            ),
+          ),
+        ),
+        _buildGridCard(
+          'Online Balance',
+          online,
+          Icons.account_balance_outlined,
+          const Color(0xFFF9F6ED),
+          const Color(0xFFB08900),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TransactionStatementScreen(category: 'online'),
+            ),
+          ),
+        ),
+        _buildGridCard(
+          'Gold Balance',
+          gold,
+          Icons.widgets_outlined,
+          const Color(0xFFE8C73D),
+          const Color(0xFF4A3E1F),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TransactionStatementScreen(category: 'gold'),
+            ),
+          ),
+        ),
+        _buildGridCard(
+          'Diamond Balance',
+          diamond,
+          Icons.diamond_outlined,
+          const Color(0xFFE3EDF7),
+          const Color(0xFF5B81A8),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TransactionStatementScreen(category: 'diamond'),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildGridCard(String title, String value, IconData icon, Color iconBgColor, Color iconColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              shape: BoxShape.circle,
+  Widget _buildGridCard(
+    String title,
+    String value,
+    IconData icon,
+    Color iconBgColor,
+    Color iconColor, {
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.montserrat(
-                  fontSize: 12,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w600,
-                ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: GoogleFonts.montserrat(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                  letterSpacing: -0.5,
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTodaysSummary() {
+  Widget _buildTodaysSummary({required String todayIn, required String todayOut}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -988,10 +1422,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 16,
+                  ),
                   decoration: const BoxDecoration(
                     color: Color(0xFFFDFCF7),
-                    borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
+                    borderRadius: BorderRadius.horizontal(
+                      left: Radius.circular(16),
+                    ),
                   ),
                   child: IntrinsicHeight(
                     child: Row(
@@ -1010,13 +1449,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.arrow_downward, size: 16, color: Color(0xFF757575)),
+                                const Icon(
+                                  Icons.arrow_downward,
+                                  size: 16,
+                                  color: Color(0xFF757575),
+                                ),
                                 const SizedBox(width: 4),
-                                Text("IN", style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF757575), fontWeight: FontWeight.w600)),
+                                Text(
+                                  "IN",
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 13,
+                                    color: const Color(0xFF757575),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text(todayIn, style: GoogleFonts.montserrat(fontSize: 22, color: const Color(0xFF8A7311), fontWeight: FontWeight.bold)),
+                            Text(
+                              todayIn,
+                              style: GoogleFonts.montserrat(
+                                fontSize: 22,
+                                color: const Color(0xFF8A7311),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1024,13 +1481,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
-              Container(width: 1, height: 60, color: Colors.grey.withOpacity(0.15)),
+              Container(
+                width: 1,
+                height: 60,
+                color: Colors.grey.withOpacity(0.15),
+              ),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 16,
+                  ),
                   decoration: const BoxDecoration(
                     color: Color(0xFFFFF9F9),
-                    borderRadius: BorderRadius.horizontal(right: Radius.circular(16)),
+                    borderRadius: BorderRadius.horizontal(
+                      right: Radius.circular(16),
+                    ),
                   ),
                   child: IntrinsicHeight(
                     child: Row(
@@ -1049,13 +1515,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.arrow_upward, size: 16, color: Color(0xFF757575)),
+                                const Icon(
+                                  Icons.arrow_upward,
+                                  size: 16,
+                                  color: Color(0xFF757575),
+                                ),
                                 const SizedBox(width: 4),
-                                Text("OUT", style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF757575), fontWeight: FontWeight.w600)),
+                                Text(
+                                  "OUT",
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 13,
+                                    color: const Color(0xFF757575),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text(todayOut, style: GoogleFonts.montserrat(fontSize: 22, color: const Color(0xFFC62828), fontWeight: FontWeight.bold)),
+                            Text(
+                              todayOut,
+                              style: GoogleFonts.montserrat(
+                                fontSize: 22,
+                                color: const Color(0xFFC62828),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1089,7 +1573,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             TextButton(
               onPressed: () {
-                ref.read(navigationProvider.notifier).setIndex(2); // Redirect to Ledger
+                ref
+                    .read(navigationProvider.notifier)
+                    .setIndex(2); // Redirect to Ledger
               },
               child: Text(
                 "View All",
@@ -1109,8 +1595,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             final now = DateTime.now();
             final todayTransactions = transactions.where((t) {
               return t.date.year == now.year &&
-                     t.date.month == now.month &&
-                     t.date.day == now.day;
+                  t.date.month == now.month &&
+                  t.date.day == now.day;
             }).toList();
 
             if (todayTransactions.isEmpty) {
@@ -1135,25 +1621,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             return Column(
               children: recent.map((activity) {
-                final isCredit = activity.type == TransactionType.receipt || activity.type == TransactionType.metalIn;
-                final color = isCredit ? const Color(0xFF2852C6) : const Color(0xFFC62828);
+                final isCredit =
+                    activity.type == TransactionType.receipt ||
+                    activity.type == TransactionType.metalIn;
+                final color = isCredit
+                    ? const Color(0xFF2852C6)
+                    : const Color(0xFFC62828);
                 final typeLabel = isCredit ? 'In' : 'Out';
-                
+
                 String topRightLabel = '';
                 String middleRightLabel = '';
-                
+
                 if (activity.metalType.isEmpty) {
                   topRightLabel = activity.paymentMode.name.toUpperCase();
-                  middleRightLabel = '₹ ${NumberFormat.decimalPattern('en_IN').format(activity.cashAmount)}';
+                  middleRightLabel =
+                      '₹ ${NumberFormat.decimalPattern('en_IN').format(activity.cashAmount)}';
                 } else if (activity.metalType == 'gold') {
-                  topRightLabel = 'Gold (${activity.metalPurity}%)';
+                  topRightLabel = 'Gold (${activity.metalPurity.endsWith('%') ? activity.metalPurity : '${activity.metalPurity}%'})';
                   middleRightLabel = '${activity.metalWeight}g';
                 } else if (activity.metalType == 'diamond') {
-                  topRightLabel = 'Diamond(${activity.metalWeight}ct)';
-                  middleRightLabel = activity.metalPurity;
+                  topRightLabel = 'Diamond (${activity.metalWeight}ct)';
+                  String displayPieces = activity.metalPurity;
+                  if (displayPieces.endsWith(' p')) {
+                    displayPieces = displayPieces.replaceAll(' p', ' Pcs');
+                  } else if (!displayPieces.contains('Pcs') &&
+                      !displayPieces.contains('pcs') &&
+                      !displayPieces.contains('p') &&
+                      displayPieces.isNotEmpty) {
+                    displayPieces = '$displayPieces Pcs';
+                  } else if (displayPieces.contains('pcs')) {
+                    displayPieces = displayPieces.replaceAll('pcs', 'Pcs');
+                  }
+                  middleRightLabel = displayPieces;
                 }
 
-                final initial = activity.partyName.isNotEmpty ? activity.partyName[0].toUpperCase() : '?';
+                final initial = activity.partyName.isNotEmpty
+                    ? activity.partyName[0].toUpperCase()
+                    : '?';
                 final dateStr = DateFormat('dd MMM yyyy').format(activity.date);
                 final timeStr = DateFormat('hh:mm a').format(activity.date);
 
@@ -1210,7 +1714,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 Expanded(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
@@ -1292,6 +1797,385 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ],
     );
   }
+
+  void _showPrintStatementDialog(
+    BuildContext context,
+    List<TransactionModel> txns,
+    String title,
+    String subtitle,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isPrinting = false;
+        bool isSaved = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 500),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFAF6EE),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFDFBA6B), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 25,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF01565B),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(18),
+                          topRight: Radius.circular(18),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Print Statement Preview',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                            onPressed: () => Navigator.pop(context),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    if (isPrinting)
+                      Container(
+                        height: 350,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(color: Color(0xFF01565B)),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Preparing statement sheet...',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF5E543F),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Sending documents to printer spooler...',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (isSaved)
+                      Container(
+                        height: 350,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE8F8F0),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check_circle_rounded,
+                                color: Color(0xFF01565B),
+                                size: 48,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Statement Saved!',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF01565B),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'PDF saved to Documents/SwarnKhata/Statements',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                'Dismiss',
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFF01565B),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      // Preview Content
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'SWARN KHATA',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF735C0F),
+                                          letterSpacing: 2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Premium Ledger Statement',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 10,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        subtitle,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Divider(height: 1, color: Colors.grey[300]),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Total Entries:',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                    Text(
+                                      '${txns.length} items',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Table(
+                                  border: TableBorder.all(color: Colors.grey.withOpacity(0.3), width: 0.5),
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(2),
+                                    1: FlexColumnWidth(3),
+                                    2: FlexColumnWidth(2.5),
+                                  },
+                                  children: [
+                                    TableRow(
+                                      decoration: const BoxDecoration(color: Color(0xFFFAF6EE)),
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(4.0),
+                                          child: Text('Date', style: GoogleFonts.montserrat(fontSize: 8, fontWeight: FontWeight.bold)),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(4.0),
+                                          child: Text('Party / Mode', style: GoogleFonts.montserrat(fontSize: 8, fontWeight: FontWeight.bold)),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(4.0),
+                                          child: Text('Amount', style: GoogleFonts.montserrat(fontSize: 8, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                    ...txns.take(8).map((txn) {
+                                      final isCr = txn.type == TransactionType.receipt || txn.type == TransactionType.metalIn;
+                                      String categoryUnit = '';
+                                      if (txn.metalType == 'gold') {
+                                        categoryUnit = 'g';
+                                      } else if (txn.metalType == 'diamond') {
+                                        categoryUnit = 'ct';
+                                      }
+
+                                      final amt = txn.metalType.isEmpty 
+                                          ? '₹${NumberFormat.decimalPattern('en_IN').format(txn.cashAmount)}'
+                                          : '${txn.metalWeight} $categoryUnit';
+                                      return TableRow(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.all(4.0),
+                                            child: Text(DateFormat('dd MMM').format(txn.date), style: GoogleFonts.montserrat(fontSize: 8)),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(4.0),
+                                            child: Text(
+                                              txn.partyName,
+                                              style: GoogleFonts.montserrat(fontSize: 8),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(4.0),
+                                            child: Text(
+                                              '${isCr ? '+' : '-'}$amt',
+                                              style: GoogleFonts.montserrat(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.bold,
+                                                color: isCr ? const Color(0xFF01565B) : const Color(0xFFC62828),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }),
+                                  ],
+                                ),
+                                if (txns.length > 8) ...[
+                                  const SizedBox(height: 6),
+                                  Center(
+                                    child: Text(
+                                      '... and ${txns.length - 8} more entries ...',
+                                      style: GoogleFonts.montserrat(fontSize: 8, color: Colors.grey),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Print Dialog Actions
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    isPrinting = true;
+                                  });
+                                  Future.delayed(const Duration(seconds: 2), () {
+                                    setDialogState(() {
+                                      isPrinting = false;
+                                      isSaved = true;
+                                    });
+                                  });
+                                },
+                                icon: const Icon(Icons.print_rounded, size: 18, color: Color(0xFF01565B)),
+                                label: Text(
+                                  'Print Statement',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF01565B),
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFF01565B), width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    isPrinting = true;
+                                  });
+                                  Future.delayed(const Duration(seconds: 1), () {
+                                    setDialogState(() {
+                                      isPrinting = false;
+                                      isSaved = true;
+                                    });
+                                  });
+                                },
+                                icon: const Icon(Icons.picture_as_pdf, size: 18, color: Colors.white),
+                                label: Text(
+                                  'Save PDF',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF01565B),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 // ==========================================
@@ -1302,10 +2186,12 @@ class TabletQuickAddEntryDialog extends ConsumerStatefulWidget {
   const TabletQuickAddEntryDialog({super.key});
 
   @override
-  ConsumerState<TabletQuickAddEntryDialog> createState() => _TabletQuickAddEntryDialogState();
+  ConsumerState<TabletQuickAddEntryDialog> createState() =>
+      _TabletQuickAddEntryDialogState();
 }
 
-class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryDialog> {
+class _TabletQuickAddEntryDialogState
+    extends ConsumerState<TabletQuickAddEntryDialog> {
   String _transactionType = 'IN';
   String _category = 'Money'; // Money, Gold, Diamond
   String _paymentMode = 'Cash'; // Cash, UPI, RTGS
@@ -1341,7 +2227,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
   @override
   Widget build(BuildContext context) {
     final parties = ref.watch(partiesStreamProvider).value ?? [];
-    
+
     if (_pendingPartyId != null && parties.isNotEmpty) {
       try {
         final party = parties.firstWhere((p) => p.id == _pendingPartyId);
@@ -1358,10 +2244,12 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
     }
 
     return Container(
-      width: 680, // Increased from 620
-      constraints: const BoxConstraints(maxHeight: 800), // Increased from 750
+      width: 620,
+      constraints: const BoxConstraints(maxHeight: 750),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF6EE), // Sleek warm beige background matching the screenshot
+        color: const Color(
+          0xFFFAF6EE,
+        ), // Sleek warm beige background matching the screenshot
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFE5DEC9), width: 1.5),
         boxShadow: [
@@ -1372,7 +2260,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
           ),
         ],
       ),
-      padding: const EdgeInsets.all(32.0), // Increased from 28
+      padding: const EdgeInsets.all(28.0),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1388,7 +2276,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                     Text(
                       'Quick Add Entry',
                       style: GoogleFonts.montserrat(
-                        fontSize: 26, // Increased from 22
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF01565B), // Deep teal
                       ),
@@ -1397,7 +2285,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                     Text(
                       'Record transaction details.',
                       style: GoogleFonts.montserrat(
-                        fontSize: 15, // Increased from 13
+                        fontSize: 13,
                         color: const Color(0xFF5E543F).withOpacity(0.8),
                       ),
                     ),
@@ -1420,7 +2308,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                         }
                       },
                     ),
-                    const SizedBox(width: 10), // Increased from 8
+                    const SizedBox(width: 8),
                     _buildDateTimePicker(
                       icon: Icons.access_time_outlined,
                       text: _selectedTime.format(context),
@@ -1438,7 +2326,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                 ),
               ],
             ),
-            const SizedBox(height: 28), // Increased from 24
+            const SizedBox(height: 24),
 
             // IN / OUT Toggle
             Container(
@@ -1470,7 +2358,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                 ],
               ),
             ),
-            const SizedBox(height: 24), // Increased from 20
+            const SizedBox(height: 20),
 
             // Party / Customer Selector Row
             Row(
@@ -1479,7 +2367,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                 Text(
                   'Party / Customer',
                   style: GoogleFonts.montserrat(
-                    fontSize: 16, // Increased from 13
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF5E543F),
                   ),
@@ -1498,19 +2386,26 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                   },
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Increased from 12, 6
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: const Color(0xFFDFBA6B)),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.add, size: 18, color: Color(0xFF735C0F)), // Increased from 16
+                        const Icon(
+                          Icons.add,
+                          size: 16,
+                          color: Color(0xFF735C0F),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Add New',
                           style: GoogleFonts.montserrat(
-                            fontSize: 14, // Increased from 12
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF735C0F),
                           ),
@@ -1521,20 +2416,20 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                 ),
               ],
             ),
-            const SizedBox(height: 10), // Increased from 8
+            const SizedBox(height: 8),
             _buildPartyAutocomplete(),
-            const SizedBox(height: 24), // Increased from 20
+            const SizedBox(height: 20),
 
             // Category Toggle
             Text(
               'Category',
               style: GoogleFonts.montserrat(
-                fontSize: 16, // Increased from 13
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF5E543F),
               ),
             ),
-            const SizedBox(height: 10), // Increased from 8
+            const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
                 color: const Color(0xFFF4EDE4),
@@ -1549,16 +2444,18 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                 ],
               ),
             ),
-            const SizedBox(height: 24), // Increased from 20
+            const SizedBox(height: 20),
 
             // Dynamic Form Fields based on Category
             if (_category == 'Money') ...[
               Container(
-                padding: const EdgeInsets.all(20), // Increased from 16
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5DEC9).withOpacity(0.5)),
+                  border: Border.all(
+                    color: const Color(0xFFE5DEC9).withOpacity(0.5),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1566,31 +2463,31 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                     Text(
                       'Payment Mode',
                       style: GoogleFonts.montserrat(
-                        fontSize: 16, // Increased from 13
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF5E543F),
                       ),
                     ),
-                    const SizedBox(height: 12), // Increased from 10
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         _buildPaymentModeChip('Cash'),
-                        const SizedBox(width: 14), // Increased from 12
+                        const SizedBox(width: 12),
                         _buildPaymentModeChip('UPI'),
-                        const SizedBox(width: 14), // Increased from 12
+                        const SizedBox(width: 12),
                         _buildPaymentModeChip('RTGS'),
                       ],
                     ),
-                    const SizedBox(height: 20), // Increased from 16
+                    const SizedBox(height: 16),
                     Text(
                       'Amount',
                       style: GoogleFonts.montserrat(
-                        fontSize: 16, // Increased from 13
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF5E543F),
                       ),
                     ),
-                    const SizedBox(height: 10), // Increased from 8
+                    const SizedBox(height: 8),
                     TextField(
                       controller: _amountController,
                       keyboardType: TextInputType.number,
@@ -1598,25 +2495,47 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                         FilteringTextInputFormatter.digitsOnly,
                         _IndianCurrencyFormatter(),
                       ],
-                      style: GoogleFonts.montserrat(fontSize: 22, fontWeight: FontWeight.bold), // Increased from 18
+                      style: GoogleFonts.montserrat(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                       decoration: InputDecoration(
                         hintText: '0',
-                        hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade300, fontSize: 22), // Increased from 18
+                        hintStyle: GoogleFonts.montserrat(
+                          color: Colors.grey.shade300,
+                          fontSize: 18,
+                        ),
                         prefixIcon: Padding(
-                          padding: const EdgeInsets.all(8.0), // Increased from 6.0
+                          padding: const EdgeInsets.all(6.0),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), // Increased from 12, 8
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF4EDE4),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text('₹', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF735C0F))), // Increased from 18
+                            child: const Text(
+                              '₹',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF735C0F),
+                              ),
+                            ),
                           ),
                         ),
-                        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 0,
+                          minHeight: 0,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16), // Increased from 16, 12
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.grey.shade400),
@@ -1627,7 +2546,9 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFDFBA6B)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFDFBA6B),
+                          ),
                         ),
                       ),
                     ),
@@ -1643,89 +2564,143 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                       children: [
                         Text(
                           'Purity %',
-                          style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF5E543F)), // Increased from 13
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5E543F),
+                          ),
                         ),
-                        const SizedBox(height: 10), // Increased from 8
+                        const SizedBox(height: 8),
                         TextField(
                           controller: _purityController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           textAlign: TextAlign.right,
-                          style: GoogleFonts.montserrat(fontSize: 18), // Increased from 15
+                          style: GoogleFonts.montserrat(fontSize: 15),
                           decoration: InputDecoration(
                             hintText: '99.5',
-                            hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 18), // Increased from 15
+                            hintStyle: GoogleFonts.montserrat(
+                              color: Colors.grey.shade400,
+                              fontSize: 15,
+                            ),
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 16.0), // Increased from 12.0
+                              padding: const EdgeInsets.only(right: 12.0),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text('%', style: GoogleFonts.montserrat(fontSize: 18, color: Colors.grey.shade600)), // Increased from 16
+                                  Text(
+                                    '%',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 16,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                            suffixIconConstraints: const BoxConstraints(
+                              minWidth: 0,
+                              minHeight: 0,
+                            ),
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Increased from 12, 14
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0xFFDFBA6B)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFDFBA6B),
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 20), // Increased from 16
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Weight (g)',
-                          style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF5E543F)), // Increased from 13
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5E543F),
+                          ),
                         ),
-                        const SizedBox(height: 10), // Increased from 8
+                        const SizedBox(height: 8),
                         TextField(
                           controller: _weightController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           textAlign: TextAlign.right,
-                          style: GoogleFonts.montserrat(fontSize: 18), // Increased from 15
+                          style: GoogleFonts.montserrat(fontSize: 15),
                           decoration: InputDecoration(
                             hintText: '0.00',
-                            hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 18), // Increased from 15
+                            hintStyle: GoogleFonts.montserrat(
+                              color: Colors.grey.shade400,
+                              fontSize: 15,
+                            ),
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 16.0), // Increased from 12.0
+                              padding: const EdgeInsets.only(right: 12.0),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text('g', style: GoogleFonts.montserrat(fontSize: 18, color: Colors.grey.shade600)), // Increased from 16
+                                  Text(
+                                    'g',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 16,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                            suffixIconConstraints: const BoxConstraints(
+                              minWidth: 0,
+                              minHeight: 0,
+                            ),
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Increased from 12, 14
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0xFFDFBA6B)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFDFBA6B),
+                              ),
                             ),
                           ),
                         ),
@@ -1743,69 +2718,111 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                       children: [
                         Text(
                           'CARAT (CT)',
-                          style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF5E543F)), // Increased from 13
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5E543F),
+                          ),
                         ),
-                        const SizedBox(height: 10), // Increased from 8
+                        const SizedBox(height: 8),
                         TextField(
                           controller: _caratController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600), // Increased from 16
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                           decoration: InputDecoration(
                             hintText: '0.00',
-                            hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600), // Increased from 16
+                            hintStyle: GoogleFonts.montserrat(
+                              color: Colors.grey.shade400,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Increased from 12, 14
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0xFFDFBA6B)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFDFBA6B),
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 20), // Increased from 16
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'PIECES',
-                          style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF5E543F)), // Increased from 13
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5E543F),
+                          ),
                         ),
-                        const SizedBox(height: 10), // Increased from 8
+                        const SizedBox(height: 8),
                         TextField(
                           controller: _piecesController,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600), // Increased from 16
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                           decoration: InputDecoration(
                             hintText: '0',
-                            hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade400, fontSize: 18, fontWeight: FontWeight.w600), // Increased from 16
+                            hintStyle: GoogleFonts.montserrat(
+                              color: Colors.grey.shade400,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Increased from 12, 14
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0xFFDFBA6B)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFDFBA6B),
+                              ),
                             ),
                           ),
                         ),
@@ -1815,28 +2832,28 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                 ],
               ),
             ],
-            const SizedBox(height: 24), // Increased from 20
+            const SizedBox(height: 20),
 
             // Particulars / Notes
             Text(
               'Particulars / Notes',
               style: GoogleFonts.montserrat(
-                fontSize: 16, // Increased from 13
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF5E543F),
               ),
             ),
-            const SizedBox(height: 10), // Increased from 8
+            const SizedBox(height: 8),
             TextField(
               controller: _notesController,
               maxLines: 2,
-              style: GoogleFonts.montserrat(fontSize: 16), // Increased from 14
+              style: GoogleFonts.montserrat(fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Add details about the transaction...',
                 hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade500),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(16), // Increased from 14
+                contentPadding: const EdgeInsets.all(14),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1851,7 +2868,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                 ),
               ),
             ),
-            const SizedBox(height: 32), // Increased from 28
+            const SizedBox(height: 28),
 
             // Buttons
             Row(
@@ -1860,7 +2877,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 18), // Increased from 16
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: const Color(0xFFF4EDE4),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -1870,18 +2887,18 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                       'Cancel',
                       style: GoogleFonts.montserrat(
                         color: Colors.black87,
-                        fontSize: 17, // Increased from 15
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 20), // Increased from 16
+                const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _isSaving ? null : _saveTransaction,
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 18), // Increased from 16
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: const Color(0xFFDFBA6B), // Gold
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -1890,20 +2907,27 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                     ),
                     child: _isSaving
                         ? const SizedBox(
-                            width: 24, // Increased from 20
-                            height: 24, // Increased from 20
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF01565B)),
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Color(0xFF01565B),
+                            ),
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.check, color: Color(0xFF01565B), size: 20), // Increased from 18
+                              const Icon(
+                                Icons.check,
+                                color: Color(0xFF01565B),
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Save Entry',
                                 style: GoogleFonts.montserrat(
                                   color: const Color(0xFF01565B),
-                                  fontSize: 17, // Increased from 15
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1928,7 +2952,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), // Increased from 10, 6
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -1944,12 +2968,12 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: const Color(0xFF5E543F)), // Increased from 14
+            Icon(icon, size: 14, color: const Color(0xFF5E543F)),
             const SizedBox(width: 6),
             Text(
               text,
               style: GoogleFonts.montserrat(
-                fontSize: 14, // Increased from 11
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF5E543F),
               ),
@@ -1970,7 +2994,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16), // Increased from 12
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
@@ -1983,21 +3007,25 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                     color: Colors.black.withOpacity(0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ]
               : [],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? selectedColor : const Color(0xFF5E543F), size: 18), // Increased from 16
+            Icon(
+              icon,
+              color: isSelected ? selectedColor : const Color(0xFF5E543F),
+              size: 16,
+            ),
             const SizedBox(width: 8),
             Text(
               title,
               style: GoogleFonts.montserrat(
                 color: isSelected ? selectedColor : const Color(0xFF5E543F),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 15, // Increased from 13
+                fontSize: 13,
               ),
             ),
           ],
@@ -2012,7 +3040,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
       child: GestureDetector(
         onTap: () => setState(() => _category = categoryName),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14), // Increased from 10
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSelected ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
@@ -2022,7 +3050,7 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                       color: Colors.black.withOpacity(0.03),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
-                    )
+                    ),
                   ]
                 : [],
           ),
@@ -2030,9 +3058,11 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
             child: Text(
               categoryName,
               style: GoogleFonts.montserrat(
-                color: isSelected ? const Color(0xFF01565B) : const Color(0xFF5E543F),
+                color: isSelected
+                    ? const Color(0xFF01565B)
+                    : const Color(0xFF5E543F),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 15, // Increased from 13
+                fontSize: 13,
               ),
             ),
           ),
@@ -2046,20 +3076,24 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
     return GestureDetector(
       onTap: () => setState(() => _paymentMode = mode),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10), // Increased from 18, 8
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFFFF9E6) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFFDFBA6B) : const Color(0xFFE5DEC9),
+            color: isSelected
+                ? const Color(0xFFDFBA6B)
+                : const Color(0xFFE5DEC9),
           ),
         ),
         child: Text(
           mode,
           style: GoogleFonts.montserrat(
-            color: isSelected ? const Color(0xFF735C0F) : const Color(0xFF5E543F),
+            color: isSelected
+                ? const Color(0xFF735C0F)
+                : const Color(0xFF5E543F),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 14, // Increased from 12
+            fontSize: 12,
           ),
         ),
       ),
@@ -2074,61 +3108,73 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
         optionsBuilder: (TextEditingValue textEditingValue) {
           final query = textEditingValue.text.trim().toLowerCase();
           final parties = ref.read(partiesStreamProvider).value ?? [];
-          
+
           if (query.isEmpty) {
-            final recent = parties.toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+            final recent = parties.toList()
+              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
             return recent.take(5);
           }
-          
+
           final matches = parties.where((party) {
-            return party.name.toLowerCase().contains(query) || party.phone.contains(query);
+            return party.name.toLowerCase().contains(query) ||
+                party.phone.contains(query);
           }).toList();
-          
+
           return matches;
         },
         displayStringForOption: (PartyModel option) => option.name,
         onSelected: (PartyModel selection) {
           setState(() => _selectedParty = selection);
         },
-        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-          return TextField(
-            controller: textEditingController,
-            focusNode: focusNode,
-            style: GoogleFonts.montserrat(fontSize: 16), // Increased from 14
-            decoration: InputDecoration(
-              hintText: 'Search party name or phone...',
-              hintStyle: GoogleFonts.montserrat(color: Colors.grey.shade500, fontSize: 16), // Specifying font size
-              prefixIcon: const Icon(Icons.search, color: Color(0xFF5E543F), size: 20), // Increased from 18
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 14), // Increased from 12
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFDFBA6B)),
-              ),
-              suffixIcon: _selectedParty != null || textEditingController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 20), // Increased from 18
-                      onPressed: () {
-                        textEditingController.clear();
-                        setState(() => _selectedParty = null);
-                      },
-                    )
-                  : null,
-            ),
-            onSubmitted: (String value) {
-              onFieldSubmitted();
+        fieldViewBuilder:
+            (context, textEditingController, focusNode, onFieldSubmitted) {
+              return TextField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                style: GoogleFonts.montserrat(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search party name or phone...',
+                  hintStyle: GoogleFonts.montserrat(
+                    color: Colors.grey.shade500,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(0xFF5E543F),
+                    size: 18,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFDFBA6B)),
+                  ),
+                  suffixIcon:
+                      _selectedParty != null ||
+                          textEditingController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            textEditingController.clear();
+                            setState(() => _selectedParty = null);
+                          },
+                        )
+                      : null,
+                ),
+                onSubmitted: (String value) {
+                  onFieldSubmitted();
+                },
+              );
             },
-          );
-        },
         optionsViewBuilder: (context, onSelected, options) {
           return Align(
             alignment: Alignment.topLeft,
@@ -2139,7 +3185,10 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
               color: Colors.white,
               clipBehavior: Clip.antiAlias,
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: 200, maxWidth: constraints.maxWidth),
+                constraints: BoxConstraints(
+                  maxHeight: 200,
+                  maxWidth: constraints.maxWidth,
+                ),
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   shrinkWrap: true,
@@ -2150,14 +3199,28 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: const Color(0xFFF4EDE4),
-                        radius: 20, // Increased from 16
+                        radius: 16,
                         child: Text(
-                          option.name.isNotEmpty ? option.name[0].toUpperCase() : '?',
-                          style: GoogleFonts.montserrat(color: const Color(0xFF735C0F), fontWeight: FontWeight.bold, fontSize: 14), // Increased from 12
+                          option.name.isNotEmpty
+                              ? option.name[0].toUpperCase()
+                              : '?',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF735C0F),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                      title: _buildHighlightText(option.name, _partyController.text),
-                      subtitle: option.phone.isNotEmpty ? Text(option.phone, style: GoogleFonts.montserrat(fontSize: 13)) : null, // Increased from 11
+                      title: _buildHighlightText(
+                        option.name,
+                        _partyController.text,
+                      ),
+                      subtitle: option.phone.isNotEmpty
+                          ? Text(
+                              option.phone,
+                              style: GoogleFonts.montserrat(fontSize: 11),
+                            )
+                          : null,
                       dense: true,
                       onTap: () => onSelected(option),
                     );
@@ -2172,21 +3235,47 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
   }
 
   Widget _buildHighlightText(String text, String query) {
-    if (query.isEmpty) return Text(text, style: GoogleFonts.montserrat(fontWeight: FontWeight.w500, fontSize: 15));
+    if (query.isEmpty)
+      return Text(
+        text,
+        style: GoogleFonts.montserrat(
+          fontWeight: FontWeight.w500,
+          fontSize: 15,
+        ),
+      );
     final matchIndex = text.toLowerCase().indexOf(query.toLowerCase());
-    if (matchIndex == -1) return Text(text, style: GoogleFonts.montserrat(fontWeight: FontWeight.w500, fontSize: 15));
+    if (matchIndex == -1)
+      return Text(
+        text,
+        style: GoogleFonts.montserrat(
+          fontWeight: FontWeight.w500,
+          fontSize: 15,
+        ),
+      );
     return RichText(
       text: TextSpan(
         text: text.substring(0, matchIndex),
-        style: GoogleFonts.montserrat(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 15),
+        style: GoogleFonts.montserrat(
+          color: Colors.black87,
+          fontWeight: FontWeight.w500,
+          fontSize: 15,
+        ),
         children: [
           TextSpan(
             text: text.substring(matchIndex, matchIndex + query.length),
-            style: GoogleFonts.montserrat(color: const Color(0xFFDFBA6B), fontWeight: FontWeight.bold, fontSize: 15),
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFFDFBA6B),
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
           ),
           TextSpan(
             text: text.substring(matchIndex + query.length),
-            style: GoogleFonts.montserrat(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 15),
+            style: GoogleFonts.montserrat(
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
           ),
         ],
       ),
@@ -2195,9 +3284,9 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
 
   Future<void> _saveTransaction() async {
     if (_selectedParty == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a party')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a party')));
       return;
     }
 
@@ -2207,51 +3296,66 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
       // Determine TransactionType
       TransactionType tType = TransactionType.sale; // default
       if (_transactionType == 'IN') {
-        if (_category == 'Money') tType = TransactionType.receipt;
-        else tType = TransactionType.metalIn;
+        if (_category == 'Money')
+          tType = TransactionType.receipt;
+        else
+          tType = TransactionType.metalIn;
       } else {
-        if (_category == 'Money') tType = TransactionType.payment;
-        else tType = TransactionType.metalOut;
+        if (_category == 'Money')
+          tType = TransactionType.payment;
+        else
+          tType = TransactionType.metalOut;
       }
 
       // Determine PaymentMode
       PaymentMode pMode = PaymentMode.cash;
       if (_category == 'Money') {
-        if (_paymentMode == 'Cash') pMode = PaymentMode.cash;
-        else if (_paymentMode == 'UPI') pMode = PaymentMode.upi;
-        else if (_paymentMode == 'RTGS') pMode = PaymentMode.rtgs;
+        if (_paymentMode == 'Cash')
+          pMode = PaymentMode.cash;
+        else if (_paymentMode == 'UPI')
+          pMode = PaymentMode.upi;
+        else if (_paymentMode == 'RTGS')
+          pMode = PaymentMode.rtgs;
       } else {
         pMode = PaymentMode.metal;
       }
 
       // Parse values
-      double cashAmt = double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
+      double cashAmt =
+          double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
       double metalWt = 0.0;
-      if (_category == 'Gold') metalWt = double.tryParse(_weightController.text) ?? 0.0;
-      if (_category == 'Diamond') metalWt = double.tryParse(_caratController.text) ?? 0.0;
-      
+      if (_category == 'Gold')
+        metalWt = double.tryParse(_weightController.text) ?? 0.0;
+      if (_category == 'Diamond')
+        metalWt = double.tryParse(_caratController.text) ?? 0.0;
+
       String metalP = '';
       if (_category == 'Gold') metalP = _purityController.text.trim();
       if (_category == 'Diamond') metalP = '${_piecesController.text.trim()} p';
 
       final date = DateTime(
-        _selectedDate.year, _selectedDate.month, _selectedDate.day,
-        _selectedTime.hour, _selectedTime.minute,
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
       );
 
-      final success = await ref.read(transactionNotifierProvider.notifier).createTransaction(
-        partyId: _selectedParty!.id,
-        partyName: _selectedParty!.name,
-        partyPhone: _selectedParty!.phone,
-        type: tType,
-        paymentMode: pMode,
-        cashAmount: cashAmt,
-        metalType: _category == 'Money' ? '' : _category.toLowerCase(),
-        metalWeight: metalWt,
-        metalPurity: metalP,
-        notes: _notesController.text.trim(),
-        date: date,
-      );
+      final success = await ref
+          .read(transactionNotifierProvider.notifier)
+          .createTransaction(
+            partyId: _selectedParty!.id,
+            partyName: _selectedParty!.name,
+            partyPhone: _selectedParty!.phone,
+            type: tType,
+            paymentMode: pMode,
+            cashAmount: cashAmt,
+            metalType: _category == 'Money' ? '' : _category.toLowerCase(),
+            metalWeight: metalWt,
+            metalPurity: metalP,
+            notes: _notesController.text.trim(),
+            date: date,
+          );
 
       if (success && mounted) {
         Navigator.pop(context); // Close dialog
@@ -2259,9 +3363,9 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
           const SnackBar(content: Text('Quick Entry saved successfully')),
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save entry')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to save entry')));
       }
     } catch (_) {
       if (mounted) {
@@ -2275,12 +3379,16 @@ class _TabletQuickAddEntryDialogState extends ConsumerState<TabletQuickAddEntryD
       }
     }
   }
+
+
 }
 
 class _IndianCurrencyFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.text.isEmpty) {
       return newValue.copyWith(text: '');
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import '../providers/navigation_provider.dart';
 
 class CustomBottomNavBar extends ConsumerWidget {
@@ -9,7 +10,7 @@ class CustomBottomNavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(navigationProvider);
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -28,8 +29,8 @@ class CustomBottomNavBar extends ConsumerWidget {
       ),
       child: SafeArea(
         child: Container(
-          height: isTablet ? 88 : 76,
-          padding: EdgeInsets.symmetric(horizontal: isTablet ? 120 : 8),
+          height: isTablet ? 80 : 76,
+          padding: EdgeInsets.symmetric(horizontal: isTablet ? 72 : 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -93,9 +94,9 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double bgSize = isTablet ? 56 : 42;
-    final double iconSize = isTablet ? 32 : 24;
-    final double fontSize = isTablet ? 15 : 10;
+    final double bgSize = isTablet ? 48 : 42;
+    final double iconSize = isTablet ? 28 : 24;
+    final double fontSize = isTablet ? 13 : 10;
 
     return Expanded(
       child: GestureDetector(
@@ -122,7 +123,7 @@ class _NavBarItem extends StatelessWidget {
                               color: const Color(0xFF01565B).withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
-                            )
+                            ),
                           ]
                         : [],
                   ),
@@ -135,8 +136,8 @@ class _NavBarItem extends StatelessWidget {
                     duration: const Duration(milliseconds: 300),
                     child: Icon(
                       icon,
-                      color: isSelected 
-                          ? const Color(0xFFCFA63A) 
+                      color: isSelected
+                          ? const Color(0xFFCFA63A)
                           : const Color(0xFF4D4635).withOpacity(0.6),
                       size: iconSize,
                     ),
@@ -152,17 +153,21 @@ class _NavBarItem extends StatelessWidget {
               style: isTablet
                   ? GoogleFonts.montserrat(
                       fontSize: fontSize,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                      color: isSelected 
-                          ? const Color(0xFF01565B) 
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w600,
+                      color: isSelected
+                          ? const Color(0xFF01565B)
                           : const Color(0xFF4D4635).withOpacity(0.6),
                       letterSpacing: isSelected ? 0.3 : 0,
                     )
                   : GoogleFonts.inder(
                       fontSize: fontSize,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected 
-                          ? const Color(0xFF01565B) 
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? const Color(0xFF01565B)
                           : const Color(0xFF4D4635).withOpacity(0.6),
                       letterSpacing: isSelected ? 0.3 : 0,
                     ),

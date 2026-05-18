@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../../entries/presentation/screens/entries_screen.dart';
@@ -17,11 +18,12 @@ class MainScreen extends ConsumerStatefulWidget {
   ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProviderStateMixin {
+class _MainScreenState extends ConsumerState<MainScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   bool _isSidebarCollapsed = false;
-  
+
   // Persistent GlobalKey to reparent the bodyContent smoothly on orientation change
   final GlobalKey _bodyKey = GlobalKey(debugLabel: 'main_body_content_key');
 
@@ -55,8 +57,9 @@ class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
-    final isTablet = MediaQuery.of(context).size.width >= 600;
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isTablet = AppResponsive.isTablet(context);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     final showSidebar = isTablet && isLandscape;
 
     Widget bodyContent = FadeTransition(
@@ -89,9 +92,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with SingleTickerProvid
               });
             },
           ),
-          Expanded(
-            child: bodyContent,
-          ),
+          Expanded(child: bodyContent),
         ],
       );
     }

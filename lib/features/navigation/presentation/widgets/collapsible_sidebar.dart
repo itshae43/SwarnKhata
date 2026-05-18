@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
-import '../../../home/presentation/screens/home_screen.dart';
 
 class CollapsibleSidebar extends ConsumerWidget {
   final int currentIndex;
@@ -27,15 +26,16 @@ class CollapsibleSidebar extends ConsumerWidget {
     // Watch current user provider
     final userAsync = ref.watch(currentUserProvider);
     final userModel = userAsync.asData?.value;
-    final userName = userModel != null && userModel.businessName.trim().isNotEmpty
+    final userName =
+        userModel != null && userModel.businessName.trim().isNotEmpty
         ? userModel.businessName
         : userModel != null && userModel.fullName.trim().isNotEmpty
-            ? userModel.fullName
-            : 'Swastik Jewels';
+        ? userModel.fullName
+        : 'Swastik Jewels';
     final userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'S';
     final photoUrl = userModel?.photoUrl ?? '';
 
-    final sidebarWidth = isCollapsed ? 76.0 : 250.0;
+    final sidebarWidth = isCollapsed ? 72.0 : 232.0;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -44,12 +44,7 @@ class CollapsibleSidebar extends ConsumerWidget {
       height: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFFFAF6EE), // exact beige/cream background
-        border: Border(
-          right: BorderSide(
-            color: dividerColor,
-            width: 1.5,
-          ),
-        ),
+        border: Border(right: BorderSide(color: dividerColor, width: 1.5)),
       ),
       child: SafeArea(
         child: Column(
@@ -61,22 +56,40 @@ class CollapsibleSidebar extends ConsumerWidget {
               child: isCollapsed
                   ? Column(
                       children: [
-                        _buildAvatar(photoUrl, userInitial, goldColor, tealColor),
+                        _buildAvatar(
+                          photoUrl,
+                          userInitial,
+                          goldColor,
+                          tealColor,
+                        ),
                         const SizedBox(height: 12),
-                        const Divider(color: Color(0xFFE5DEC9), height: 1, thickness: 1),
+                        const Divider(
+                          color: Color(0xFFE5DEC9),
+                          height: 1,
+                          thickness: 1,
+                        ),
                         const SizedBox(height: 12),
-                        _buildToggleButton(isCollapsed, onToggleCollapse, tealColor),
+                        _buildToggleButton(
+                          isCollapsed,
+                          onToggleCollapse,
+                          tealColor,
+                        ),
                       ],
                     )
                   : Row(
                       children: [
-                        _buildAvatar(photoUrl, userInitial, goldColor, tealColor),
+                        _buildAvatar(
+                          photoUrl,
+                          userInitial,
+                          goldColor,
+                          tealColor,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             userName,
                             style: GoogleFonts.montserrat(
-                              fontSize: 18, // Increased from 16
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF735C0F), // Olive gold text
                               letterSpacing: 0.3,
@@ -86,12 +99,16 @@ class CollapsibleSidebar extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        _buildToggleButton(isCollapsed, onToggleCollapse, tealColor),
+                        _buildToggleButton(
+                          isCollapsed,
+                          onToggleCollapse,
+                          tealColor,
+                        ),
                       ],
                     ),
             ),
             const Divider(color: Color(0xFFE5DEC9), height: 1, thickness: 1),
-            const SizedBox(height: 20), // Increased from 16
+            const SizedBox(height: 16),
 
             // Navigation Items (Home, Entry, Ledger, Reminders)
             Expanded(
@@ -106,7 +123,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                     isCollapsed: isCollapsed,
                     onTap: () => onTap(0),
                   ),
-                  const SizedBox(height: 12), // Increased from 8
+                  const SizedBox(height: 8),
                   _SidebarItem(
                     icon: Icons.add_circle_outline_rounded,
                     label: 'Entry',
@@ -114,7 +131,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                     isCollapsed: isCollapsed,
                     onTap: () => onTap(1),
                   ),
-                  const SizedBox(height: 12), // Increased from 8
+                  const SizedBox(height: 8),
                   _SidebarItem(
                     icon: Icons.note_alt_outlined,
                     label: 'Ledger',
@@ -122,7 +139,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                     isCollapsed: isCollapsed,
                     onTap: () => onTap(2),
                   ),
-                  const SizedBox(height: 12), // Increased from 8
+                  const SizedBox(height: 8),
                   _SidebarItem(
                     icon: Icons.notifications_none_rounded,
                     label: 'Reminders',
@@ -133,8 +150,6 @@ class CollapsibleSidebar extends ConsumerWidget {
                 ],
               ),
             ),
-
-
 
             // Divider above Settings
             const Divider(color: Color(0xFFE5DEC9), height: 1, thickness: 1),
@@ -156,10 +171,15 @@ class CollapsibleSidebar extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatar(String photoUrl, String initial, Color goldColor, Color tealColor) {
+  Widget _buildAvatar(
+    String photoUrl,
+    String initial,
+    Color goldColor,
+    Color tealColor,
+  ) {
     return Container(
-      width: 56,
-      height: 56,
+      width: 52,
+      height: 52,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         color: Color(0xFFDFBA6B), // Gold border ring
@@ -172,15 +192,14 @@ class CollapsibleSidebar extends ConsumerWidget {
         ),
         padding: const EdgeInsets.all(1.5), // Space between ring and image
         child: Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-          ),
+          decoration: const BoxDecoration(shape: BoxShape.circle),
           clipBehavior: Clip.antiAlias,
           child: photoUrl.isNotEmpty
               ? Image.network(
                   photoUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => _buildInitialAvatar(initial, tealColor, goldColor),
+                  errorBuilder: (context, error, stackTrace) =>
+                      _buildInitialAvatar(initial, tealColor, goldColor),
                 )
               : _buildInitialAvatar(initial, tealColor, goldColor),
         ),
@@ -196,26 +215,27 @@ class CollapsibleSidebar extends ConsumerWidget {
         initial,
         style: GoogleFonts.montserrat(
           color: const Color(0xFFFAF6EE),
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 
-  Widget _buildToggleButton(bool collapsed, VoidCallback onTap, Color tealColor) {
+  Widget _buildToggleButton(
+    bool collapsed,
+    VoidCallback onTap,
+    Color tealColor,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36, // Increased from 32
-        height: 36, // Increased from 32
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(
-            color: tealColor,
-            width: 1.5,
-          ),
+          border: Border.all(color: tealColor, width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -228,7 +248,7 @@ class CollapsibleSidebar extends ConsumerWidget {
         child: Icon(
           collapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
           color: tealColor,
-          size: 24, // Increased from 20
+          size: 20,
         ),
       ),
     );
@@ -268,57 +288,59 @@ class _SidebarItemState extends State<_SidebarItem> {
 
     if (widget.isCollapsed) {
       content = Container(
-        width: 52,
-        height: 48, // Increased from 36
+        width: 48,
+        height: 40,
         decoration: widget.isSelected
             ? BoxDecoration(
                 color: goldColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: borderTealColor,
-                  width: 1.5,
-                ),
+                border: Border.all(color: borderTealColor, width: 1.5),
               )
             : null,
         alignment: Alignment.center,
         child: Icon(
           widget.icon,
           color: widget.isSelected ? borderTealColor : inactiveTextColor,
-          size: 26, // Increased from 22
+          size: 22,
         ),
       );
     } else {
       content = Container(
-        height: 56, // Increased from 48
+        height: 48,
         decoration: widget.isSelected
             ? BoxDecoration(
                 color: goldColor,
-                borderRadius: BorderRadius.circular(10), // Slightly rounder for softer feel
-                border: Border.all(
-                  color: borderTealColor,
-                  width: 1.5,
-                ),
+                borderRadius: BorderRadius.circular(
+                  10,
+                ), // Slightly rounder for softer feel
+                border: Border.all(color: borderTealColor, width: 1.5),
               )
             : BoxDecoration(
-                color: _isHovered ? tealColor.withOpacity(0.04) : Colors.transparent,
+                color: _isHovered
+                    ? tealColor.withOpacity(0.04)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
               ),
-        padding: const EdgeInsets.symmetric(horizontal: 18), // Increased from 16
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
             Icon(
               widget.icon,
               color: widget.isSelected ? borderTealColor : inactiveTextColor,
-              size: 26, // Increased from 22
+              size: 22,
             ),
-            const SizedBox(width: 18), // Increased from 16
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 widget.label,
                 style: GoogleFonts.montserrat(
-                  fontSize: 18, // Increased from 14
-                  fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w600, // Stronger weight
-                  color: widget.isSelected ? borderTealColor : inactiveTextColor,
+                  fontSize: 15,
+                  fontWeight: widget.isSelected
+                      ? FontWeight.bold
+                      : FontWeight.w600, // Stronger weight
+                  color: widget.isSelected
+                      ? borderTealColor
+                      : inactiveTextColor,
                 ),
               ),
             ),

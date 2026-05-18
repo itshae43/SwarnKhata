@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'package:swarn_khata/core/models/party_model.dart';
 import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import 'package:swarn_khata/features/parties/providers/party_providers.dart';
 import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
 import '../../../parties/presentation/screens/party_detail_screen.dart';
@@ -19,7 +20,7 @@ class LedgerScreen extends ConsumerStatefulWidget {
 class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
-  
+
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -31,7 +32,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
     final partiesAsync = ref.watch(partiesStreamProvider);
     final transactionsAsync = ref.watch(transactionsStreamProvider);
 
@@ -41,13 +42,17 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         child: partiesAsync.when(
           data: (parties) {
             final transactions = transactionsAsync.value ?? [];
-            
+
             // Apply Search Query
             final query = _searchQuery.toLowerCase().trim();
-            
+
             // Sort parties alphabetically by name (A to Z)
             final List<PartyModel> sortedParties = List.from(parties)
-              ..sort((a, b) => a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase()));
+              ..sort(
+                (a, b) => a.name.trim().toLowerCase().compareTo(
+                  b.name.trim().toLowerCase(),
+                ),
+              );
 
             // Filter by search query
             List<PartyModel> filteredParties = sortedParties.where((p) {
@@ -58,11 +63,17 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
 
             // Filter by selected category balance
             if (_selectedFilter == 'Money') {
-              filteredParties = filteredParties.where((p) => p.cashBalance != 0).toList();
+              filteredParties = filteredParties
+                  .where((p) => p.cashBalance != 0)
+                  .toList();
             } else if (_selectedFilter == 'Gold') {
-              filteredParties = filteredParties.where((p) => p.goldBalanceGrams != 0).toList();
+              filteredParties = filteredParties
+                  .where((p) => p.goldBalanceGrams != 0)
+                  .toList();
             } else if (_selectedFilter == 'Diamond') {
-              filteredParties = filteredParties.where((p) => p.diamondBalanceCarats != 0).toList();
+              filteredParties = filteredParties
+                  .where((p) => p.diamondBalanceCarats != 0)
+                  .toList();
             }
 
             // Calculate dynamic summary values from all parties (reflecting total outstanding positions)
@@ -88,24 +99,26 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.symmetric(
-                horizontal: isTablet ? 32.0 : 16.0,
-                vertical: isTablet ? 24.0 : 16.0,
+                horizontal: isTablet ? 28.0 : 16.0,
+                vertical: isTablet ? 22.0 : 16.0,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSearchBar(isTablet),
-                  SizedBox(height: isTablet ? 24 : 16),
-                  _buildFilterChips(isTablet),
-                  SizedBox(height: isTablet ? 32 : 24),
-                  _buildDynamicSummaryCards(
-                    isTablet: isTablet,
-                    totalCashReceivable: totalCashReceivable,
-                    totalGoldReceivable: totalGoldReceivable,
-                    totalCashPayable: totalCashPayable,
-                    totalGoldPayable: totalGoldPayable,
-                  ),
-                  SizedBox(height: isTablet ? 48 : 32),
+                  if (!isTablet) ...[
+                    const SizedBox(height: 16),
+                    _buildFilterChips(isTablet),
+                    const SizedBox(height: 24),
+                    _buildDynamicSummaryCards(
+                      isTablet: isTablet,
+                      totalCashReceivable: totalCashReceivable,
+                      totalGoldReceivable: totalGoldReceivable,
+                      totalCashPayable: totalCashPayable,
+                      totalGoldPayable: totalGoldPayable,
+                    ),
+                  ],
+                  SizedBox(height: isTablet ? 28 : 32),
                   _buildRecentActivityHeader(isTablet),
                   SizedBox(height: isTablet ? 24 : 16),
                   _buildPartiesList(filteredParties, isTablet, transactions),
@@ -135,20 +148,25 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             _searchQuery = value;
           });
         },
-        style: GoogleFonts.montserrat(
-          fontSize: isTablet ? 18 : 15,
-        ),
+        style: GoogleFonts.montserrat(fontSize: isTablet ? 16 : 15),
         decoration: InputDecoration(
           hintText: 'Search customers by name or phone...',
           hintStyle: GoogleFonts.montserrat(
             color: Colors.grey[500],
-            fontSize: isTablet ? 18 : 15,
+            fontSize: isTablet ? 16 : 15,
           ),
           prefixIcon: Padding(
             padding: EdgeInsets.symmetric(horizontal: isTablet ? 16 : 12),
-            child: Icon(Icons.search, color: Colors.grey[600], size: isTablet ? 28 : 24),
+            child: Icon(
+              Icons.search,
+              color: Colors.grey[600],
+              size: isTablet ? 25 : 24,
+            ),
           ),
-          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 0,
+            minHeight: 0,
+          ),
           suffixIcon: _searchQuery.isNotEmpty
               ? GestureDetector(
                   onTap: () {
@@ -159,11 +177,18 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                   },
                   child: Padding(
                     padding: EdgeInsets.only(right: isTablet ? 16 : 12),
-                    child: Icon(Icons.clear, color: Colors.grey[600], size: isTablet ? 24 : 20),
+                    child: Icon(
+                      Icons.clear,
+                      color: Colors.grey[600],
+                      size: isTablet ? 24 : 20,
+                    ),
                   ),
                 )
               : null,
-          suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 0,
+            minHeight: 0,
+          ),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(
             horizontal: isTablet ? 24 : 20,
@@ -191,14 +216,18 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
               },
               child: Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 28 : 20,
-                  vertical: isTablet ? 12 : 8,
+                  horizontal: isTablet ? 24 : 20,
+                  vertical: isTablet ? 10 : 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF6B5800) : const Color(0xFFF5EFE6),
+                  color: isSelected
+                      ? const Color(0xFF6B5800)
+                      : const Color(0xFFF5EFE6),
                   borderRadius: BorderRadius.circular(isTablet ? 24 : 20),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF6B5800) : Colors.grey.withOpacity(0.2),
+                    color: isSelected
+                        ? const Color(0xFF6B5800)
+                        : Colors.grey.withOpacity(0.2),
                   ),
                 ),
                 child: Text(
@@ -206,7 +235,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                   style: GoogleFonts.montserrat(
                     color: isSelected ? Colors.white : Colors.black87,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    fontSize: isTablet ? 18 : 14,
+                    fontSize: isTablet ? 16 : 14,
                   ),
                 ),
               ),
@@ -226,10 +255,12 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   }) {
     final formatCurrency = NumberFormat.decimalPattern('en_IN');
     final cashReceivableStr = '₹ ${formatCurrency.format(totalCashReceivable)}';
-    final goldReceivableStr = '+ ${totalGoldReceivable.toStringAsFixed(3)}g Fine Gold';
+    final goldReceivableStr =
+        '${totalGoldReceivable.toStringAsFixed(3)}g Fine Gold';
 
     final cashPayableStr = '₹ ${formatCurrency.format(totalCashPayable)}';
-    final goldPayableStr = '- ${totalGoldPayable.toStringAsFixed(3)}g Fine Gold';
+    final goldPayableStr =
+        '${totalGoldPayable.toStringAsFixed(3)}g Fine Gold';
 
     return Row(
       children: [
@@ -270,7 +301,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     required Color circleColor,
   }) {
     return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 16),
+      padding: EdgeInsets.all(isTablet ? 20 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
@@ -290,8 +321,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             right: isTablet ? -20 : -16,
             top: isTablet ? -20 : -16,
             child: Container(
-              width: isTablet ? 100 : 80,
-              height: isTablet ? 100 : 80,
+              width: isTablet ? 88 : 80,
+              height: isTablet ? 88 : 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: circleColor,
@@ -308,7 +339,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                   Text(
                     title,
                     style: GoogleFonts.montserrat(
-                      fontSize: isTablet ? 17 : 13,
+                      fontSize: isTablet ? 15 : 13,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey[800],
                       height: 1.2,
@@ -316,7 +347,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                   ),
                   Transform.rotate(
                     angle: 0.8,
-                    child: Icon(icon, color: iconColor, size: isTablet ? 26 : 20),
+                    child: Icon(
+                      icon,
+                      color: iconColor,
+                      size: isTablet ? 22 : 20,
+                    ),
                   ),
                 ],
               ),
@@ -324,7 +359,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
               Text(
                 amount,
                 style: GoogleFonts.montserrat(
-                  fontSize: isTablet ? 26 : 20,
+                  fontSize: isTablet ? 23 : 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                   letterSpacing: -0.5,
@@ -334,7 +369,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
               Text(
                 subtitle,
                 style: GoogleFonts.montserrat(
-                  fontSize: isTablet ? 16 : 12,
+                  fontSize: isTablet ? 14 : 12,
                   color: Colors.grey[700],
                   fontWeight: FontWeight.w600,
                 ),
@@ -353,7 +388,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         Text(
           "Customers Ledger",
           style: GoogleFonts.montserrat(
-            fontSize: isTablet ? 24 : 18,
+            fontSize: isTablet ? 21 : 18,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
@@ -362,7 +397,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     );
   }
 
-  Widget _buildPartiesList(List<PartyModel> filteredParties, bool isTablet, List<TransactionModel> transactions) {
+  Widget _buildPartiesList(
+    List<PartyModel> filteredParties,
+    bool isTablet,
+    List<TransactionModel> transactions,
+  ) {
     if (filteredParties.isEmpty) {
       return Center(
         child: Padding(
@@ -370,7 +409,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.people_outline, size: isTablet ? 80 : 64, color: Colors.grey[400]),
+              Icon(
+                Icons.people_outline,
+                size: isTablet ? 80 : 64,
+                color: Colors.grey[400],
+              ),
               const SizedBox(height: 16),
               Text(
                 'No customers found',
@@ -387,18 +430,27 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     }
 
     return Column(
-      children: filteredParties.map((party) => _buildPartyCard(party, isTablet, transactions)).toList(),
+      children: filteredParties
+          .map((party) => _buildPartyCard(party, isTablet, transactions))
+          .toList(),
     );
   }
 
-  Widget _buildPartyCard(PartyModel party, bool isTablet, List<TransactionModel> transactions) {
-    final partyTxns = transactions.where((t) => t.partyId == party.id).toList();
-    final txnCount = partyTxns.length;
+  Widget _buildPartyCard(
+    PartyModel party,
+    bool isTablet,
+    List<TransactionModel> transactions,
+  ) {
+
 
     Color leftBorderColor = const Color(0xFFDFBA6B); // Premium brand gold
-    if (party.cashBalance > 0 || party.goldBalanceGrams > 0 || party.diamondBalanceCarats > 0) {
+    if (party.cashBalance > 0 ||
+        party.goldBalanceGrams > 0 ||
+        party.diamondBalanceCarats > 0) {
       leftBorderColor = const Color(0xFF2852C6); // Receivable Blue
-    } else if (party.cashBalance < 0 || party.goldBalanceGrams < 0 || party.diamondBalanceCarats < 0) {
+    } else if (party.cashBalance < 0 ||
+        party.goldBalanceGrams < 0 ||
+        party.diamondBalanceCarats < 0) {
       leftBorderColor = const Color(0xFFC62828); // Payable Red
     }
 
@@ -409,9 +461,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PartyDetailScreen(
-              party: _getPartyDetail(party),
-            ),
+            builder: (context) =>
+                PartyDetailScreen(party: _getPartyDetail(party)),
           ),
         );
       },
@@ -449,8 +500,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                   child: Row(
                     children: [
                       Container(
-                        width: isTablet ? 64 : 54,
-                        height: isTablet ? 64 : 54,
+                        width: isTablet ? 58 : 54,
+                        height: isTablet ? 58 : 54,
                         decoration: const BoxDecoration(
                           color: Color(0xFFF0EBE1),
                           shape: BoxShape.circle,
@@ -459,7 +510,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                         child: Text(
                           initial,
                           style: GoogleFonts.montserrat(
-                            fontSize: isTablet ? 26 : 22,
+                            fontSize: isTablet ? 23 : 22,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF6B5800),
                           ),
@@ -475,30 +526,34 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                             Text(
                               party.name,
                               style: GoogleFonts.montserrat(
-                                fontSize: isTablet ? 20 : 16,
+                                fontSize: isTablet ? 18 : 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.phone_outlined,
-                                  size: isTablet ? 16 : 13,
-                                  color: Colors.grey[500],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  party.phone.isNotEmpty ? party.phone : 'No Phone Number',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: isTablet ? 15 : 12,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
+                            if (!isTablet) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.phone_outlined,
+                                    size: 13,
+                                    color: Colors.grey[500],
                                   ),
-                                ),
-                              ],
-                            ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    party.phone.isNotEmpty
+                                        ? party.phone
+                                        : 'No Phone Number',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -509,25 +564,42 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isTablet ? 16 : 12,
-                                  vertical: isTablet ? 8 : 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF5EFE6),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                                ),
-                                child: Text(
-                                  txnCount == 1 ? '1 Transaction' : '$txnCount Transactions',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: isTablet ? 16 : 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF6B5800),
+                              if (isTablet) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF5EFE6),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.withOpacity(0.2),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.phone_outlined,
+                                        size: 16,
+                                        color: Color(0xFF6B5800),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        party.phone.isNotEmpty
+                                            ? party.phone
+                                            : 'No Phone Number',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF6B5800),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
+                              ],
                               const SizedBox(width: 8),
                               Icon(
                                 Icons.chevron_right_rounded,
@@ -554,17 +626,19 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     final type = party.type;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-    String location = party.address.isNotEmpty 
-        ? party.address.split(',').last.trim() 
+    String location = party.address.isNotEmpty
+        ? party.address.split(',').last.trim()
         : 'India';
 
     List<PartyTransaction> transactions = [];
 
-    String totalCashDue = '₹${NumberFormat.decimalPattern('en_IN').format(party.cashBalance.abs())}';
+    String totalCashDue =
+        '₹${NumberFormat.decimalPattern('en_IN').format(party.cashBalance.abs())}';
     String cashDueLabel = party.cashBalance >= 0 ? 'They Owe' : 'You Owe';
     bool isCashYouOwe = party.cashBalance < 0;
 
-    String totalGoldDue = '${party.goldBalanceGrams.abs().toStringAsFixed(3)} g';
+    String totalGoldDue =
+        '${party.goldBalanceGrams.abs().toStringAsFixed(3)} g';
     String goldDueLabel = party.goldBalanceGrams >= 0 ? 'They Owe' : 'You Owe';
     bool isGoldYouOwe = party.goldBalanceGrams < 0;
 

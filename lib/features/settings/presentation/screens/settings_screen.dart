@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
 import 'package:swarn_khata/core/models/user_model.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -10,7 +11,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
-    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final isTablet = AppResponsive.isTablet(context);
 
     return Container(
       color: const Color(0xFFFDFBF7),
@@ -18,8 +19,8 @@ class SettingsScreen extends ConsumerWidget {
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.symmetric(
-            horizontal: isTablet ? 32.0 : 20.0,
-            vertical: isTablet ? 24.0 : 20.0,
+            horizontal: isTablet ? 28.0 : 20.0,
+            vertical: isTablet ? 22.0 : 20.0,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -28,12 +29,12 @@ class SettingsScreen extends ConsumerWidget {
               Text(
                 'Settings',
                 style: GoogleFonts.montserrat(
-                  fontSize: isTablet ? 30 : 24,
+                  fontSize: isTablet ? 26 : 24,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF1E1E1E),
                 ),
               ),
-              SizedBox(height: isTablet ? 32 : 24),
+              SizedBox(height: isTablet ? 28 : 24),
 
               // ─── PROFILE CARD ────────────────────────────────────
               userAsync.when(
@@ -50,7 +51,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 error: (e, _) => const SizedBox.shrink(),
               ),
-              SizedBox(height: isTablet ? 32 : 24),
+              SizedBox(height: isTablet ? 28 : 24),
 
               // ─── SECTION: ACCOUNT ────────────────────────────────
               _sectionLabel('Account', isTablet),
@@ -73,7 +74,7 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () {},
                 isTablet: isTablet,
               ),
-              SizedBox(height: isTablet ? 28 : 20),
+              SizedBox(height: isTablet ? 24 : 20),
 
               // ─── SECTION: BUSINESS ───────────────────────────────
               _sectionLabel('Business', isTablet),
@@ -90,7 +91,7 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () {},
                 isTablet: isTablet,
               ),
-              SizedBox(height: isTablet ? 28 : 20),
+              SizedBox(height: isTablet ? 24 : 20),
 
               // ─── SECTION: SUPPORT ────────────────────────────────
               _sectionLabel('Support', isTablet),
@@ -107,7 +108,7 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () {},
                 isTablet: isTablet,
               ),
-              SizedBox(height: isTablet ? 36 : 28),
+              SizedBox(height: isTablet ? 32 : 28),
 
               // ─── SIGN OUT BUTTON ─────────────────────────────────
               _buildSignOutButton(context, ref, isTablet),
@@ -120,9 +121,13 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildProfileCard(
-      String fullName, String businessName, String contact, bool isTablet) {
+    String fullName,
+    String businessName,
+    String contact,
+    bool isTablet,
+  ) {
     return Container(
-      padding: EdgeInsets.all(isTablet ? 28 : 20),
+      padding: EdgeInsets.all(isTablet ? 24 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(isTablet ? 24 : 20),
@@ -138,8 +143,8 @@ class SettingsScreen extends ConsumerWidget {
       child: Row(
         children: [
           Container(
-            width: isTablet ? 80 : 60,
-            height: isTablet ? 80 : 60,
+            width: isTablet ? 72 : 60,
+            height: isTablet ? 72 : 60,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFD4B13B), Color(0xFF8A7311)],
@@ -152,7 +157,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Text(
               fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
               style: GoogleFonts.montserrat(
-                fontSize: isTablet ? 32 : 24,
+                fontSize: isTablet ? 28 : 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -166,7 +171,7 @@ class SettingsScreen extends ConsumerWidget {
                 Text(
                   fullName.isEmpty ? 'User' : fullName,
                   style: GoogleFonts.montserrat(
-                    fontSize: isTablet ? 22 : 18,
+                    fontSize: isTablet ? 20 : 18,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF1E1E1E),
                   ),
@@ -176,7 +181,7 @@ class SettingsScreen extends ConsumerWidget {
                   Text(
                     businessName,
                     style: GoogleFonts.montserrat(
-                      fontSize: isTablet ? 16 : 13,
+                      fontSize: isTablet ? 14 : 13,
                       color: const Color(0xFF8A7311),
                       fontWeight: FontWeight.w600,
                     ),
@@ -186,14 +191,18 @@ class SettingsScreen extends ConsumerWidget {
                 Text(
                   contact,
                   style: GoogleFonts.montserrat(
-                    fontSize: isTablet ? 15 : 12,
+                    fontSize: isTablet ? 13 : 12,
                     color: Colors.grey[600],
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.edit_outlined, color: Colors.grey[400], size: isTablet ? 26 : 20),
+          Icon(
+            Icons.edit_outlined,
+            color: Colors.grey[400],
+            size: isTablet ? 22 : 20,
+          ),
         ],
       ),
     );
@@ -203,7 +212,7 @@ class SettingsScreen extends ConsumerWidget {
     return Text(
       label.toUpperCase(),
       style: GoogleFonts.montserrat(
-        fontSize: isTablet ? 14 : 11,
+        fontSize: isTablet ? 12 : 11,
         fontWeight: FontWeight.w700,
         color: Colors.grey[500],
         letterSpacing: 1.2,
@@ -220,10 +229,10 @@ class SettingsScreen extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: isTablet ? 14 : 10),
+        margin: EdgeInsets.only(bottom: isTablet ? 12 : 10),
         padding: EdgeInsets.symmetric(
-          horizontal: isTablet ? 22 : 16,
-          vertical: isTablet ? 18 : 14,
+          horizontal: isTablet ? 18 : 16,
+          vertical: isTablet ? 16 : 14,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -233,35 +242,47 @@ class SettingsScreen extends ConsumerWidget {
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(isTablet ? 12 : 8),
+              padding: EdgeInsets.all(isTablet ? 10 : 8),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF3D0),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: const Color(0xFF8A7311), size: isTablet ? 24 : 18),
+              child: Icon(
+                icon,
+                color: const Color(0xFF8A7311),
+                size: isTablet ? 22 : 18,
+              ),
             ),
-            SizedBox(width: isTablet ? 18 : 14),
+            SizedBox(width: isTablet ? 16 : 14),
             Expanded(
               child: Text(
                 label,
                 style: GoogleFonts.montserrat(
-                  fontSize: isTablet ? 18 : 15,
+                  fontSize: isTablet ? 16 : 15,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF1E1E1E),
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400], size: isTablet ? 26 : 20),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+              size: isTablet ? 22 : 20,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSignOutButton(BuildContext context, WidgetRef ref, bool isTablet) {
+  Widget _buildSignOutButton(
+    BuildContext context,
+    WidgetRef ref,
+    bool isTablet,
+  ) {
     return SizedBox(
       width: double.infinity,
-      height: isTablet ? 64 : 52,
+      height: isTablet ? 58 : 52,
       child: OutlinedButton.icon(
         onPressed: () async {
           final confirmed = await showDialog<bool>(
@@ -274,12 +295,12 @@ class SettingsScreen extends ConsumerWidget {
                 'Sign Out',
                 style: GoogleFonts.montserrat(
                   fontWeight: FontWeight.bold,
-                  fontSize: isTablet ? 22 : 18,
+                  fontSize: isTablet ? 20 : 18,
                 ),
               ),
               content: Text(
                 'Are you sure you want to sign out?',
-                style: GoogleFonts.montserrat(fontSize: isTablet ? 17 : 14),
+                style: GoogleFonts.montserrat(fontSize: isTablet ? 15 : 14),
               ),
               actions: [
                 TextButton(
@@ -288,7 +309,7 @@ class SettingsScreen extends ConsumerWidget {
                     'Cancel',
                     style: GoogleFonts.montserrat(
                       color: Colors.grey[700],
-                      fontSize: isTablet ? 16 : 13,
+                      fontSize: isTablet ? 14 : 13,
                     ),
                   ),
                 ),
@@ -308,7 +329,7 @@ class SettingsScreen extends ConsumerWidget {
                     'Sign Out',
                     style: GoogleFonts.montserrat(
                       color: Colors.white,
-                      fontSize: isTablet ? 16 : 13,
+                      fontSize: isTablet ? 14 : 13,
                     ),
                   ),
                 ),
@@ -319,11 +340,15 @@ class SettingsScreen extends ConsumerWidget {
             await ref.read(authNotifierProvider.notifier).signOut();
           }
         },
-        icon: Icon(Icons.logout_rounded, color: const Color(0xFFC62828), size: isTablet ? 24 : 20),
+        icon: Icon(
+          Icons.logout_rounded,
+          color: const Color(0xFFC62828),
+          size: isTablet ? 22 : 20,
+        ),
         label: Text(
           'Sign Out',
           style: GoogleFonts.montserrat(
-            fontSize: isTablet ? 18 : 15,
+            fontSize: isTablet ? 16 : 15,
             fontWeight: FontWeight.w600,
             color: const Color(0xFFC62828),
           ),
