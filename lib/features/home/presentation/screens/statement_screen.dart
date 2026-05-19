@@ -50,6 +50,41 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
     }
   }
 
+  Gradient get _categoryGradient {
+    switch (widget.category) {
+      case 'cash':
+        return const LinearGradient(
+          colors: [Color(0xFF014448), Color(0xFF026D73)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'online':
+        return const LinearGradient(
+          colors: [Color(0xFF1E3C72), Color(0xFF2A5298)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'gold':
+        return const LinearGradient(
+          colors: [Color(0xFF9E7C1C), Color(0xFFD4AF37)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'diamond':
+        return const LinearGradient(
+          colors: [Color(0xFF6B8CAD), Color(0xFF8EACCD)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      default:
+        return const LinearGradient(
+          colors: [Color(0xFF01565B), Color(0xFF026D73)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+    }
+  }
+
   String get _categoryTitle {
     switch (widget.category) {
       case 'cash':
@@ -230,19 +265,22 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
 
           final sortedDates = groupedTxns.keys.toList()..sort((a, b) => b.compareTo(a));
 
-          return Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isTablet ? 32.0 : 16.0,
-              vertical: 8.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          return Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 850),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 32.0 : 16.0,
+                  vertical: 8.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                 // Premium Balance Header Card
                 Container(
                   padding: EdgeInsets.all(isTablet ? 28 : 20),
                   decoration: BoxDecoration(
-                    color: _categoryColor,
+                    gradient: _categoryGradient,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -309,11 +347,19 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE5DEC9)),
+                          border: Border.all(color: const Color(0xFFE5DEC9).withOpacity(0.6)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: _typeFilter,
+                            isExpanded: true,
                             icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF735C0F)),
                             style: GoogleFonts.montserrat(
                               fontSize: 13,
@@ -346,11 +392,19 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE5DEC9)),
+                          border: Border.all(color: const Color(0xFFE5DEC9).withOpacity(0.6)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: _dateFilter,
+                            isExpanded: true,
                             icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF735C0F)),
                             style: GoogleFonts.montserrat(
                               fontSize: 13,
@@ -465,126 +519,147 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                                   }
 
                                   return Container(
-                                    margin: const EdgeInsets.only(bottom: 10),
+                                    margin: const EdgeInsets.only(bottom: 12),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
-                                      borderRadius: BorderRadius.circular(14),
+                                      borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
                                         color: const Color(0xFFE5DEC9).withOpacity(0.5),
                                         width: 1,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.01),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
+                                          color: Colors.black.withOpacity(0.02),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 3),
                                         ),
                                       ],
                                     ),
-                                    child: ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                      leading: CircleAvatar(
-                                        backgroundColor: avatarBgColor,
-                                        radius: 20,
-                                        child: Text(
-                                          initial,
-                                          style: GoogleFonts.montserrat(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                      title: Row(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(14.0),
+                                      child: Row(
                                         children: [
-                                          Expanded(
+                                          // Left: Styled Avatar
+                                          Container(
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: avatarBgColor.withOpacity(0.12),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            alignment: Alignment.center,
                                             child: Text(
-                                              t.partyName,
+                                              initial,
                                               style: GoogleFonts.montserrat(
-                                                fontSize: 14,
+                                                color: avatarBgColor,
                                                 fontWeight: FontWeight.bold,
-                                                color: Colors.black87,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            amountStr,
-                                            style: GoogleFonts.montserrat(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: amountColor,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: () => _showPrintReceiptDialog(context, t, amountStr, badgeText),
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFFAF6EE),
-                                                borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: const Color(0xFFE5DEC9), width: 0.5),
-                                              ),
-                                              child: const Icon(
-                                                Icons.print_rounded,
-                                                size: 14,
-                                                color: Color(0xFF735C0F),
+                                                fontSize: 16,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                      subtitle: Padding(
-                                        padding: const EdgeInsets.only(top: 6.0),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          const SizedBox(width: 12),
+                                          
+                                          // Center: Party details
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                // Purity/Payment badge
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFFFAF6EE),
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    border: Border.all(color: const Color(0xFFE5DEC9)),
-                                                  ),
-                                                  child: Text(
-                                                    badgeText,
-                                                    style: GoogleFonts.montserrat(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: const Color(0xFF735C0F),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        t.partyName,
+                                                        style: GoogleFonts.montserrat(
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Colors.black87,
+                                                        ),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
                                                     ),
-                                                  ),
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFFAF6EE),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(color: const Color(0xFFE5DEC9)),
+                                                      ),
+                                                      child: Text(
+                                                        badgeText,
+                                                        style: GoogleFonts.montserrat(
+                                                          fontSize: 9,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: const Color(0xFF735C0F),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                                Text(
-                                                  timeStr,
-                                                  style: GoogleFonts.montserrat(
-                                                    fontSize: 11,
-                                                    color: Colors.black54,
+                                                if (t.notes.isNotEmpty) ...[
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    t.notes,
+                                                    style: GoogleFonts.montserrat(
+                                                      fontSize: 11,
+                                                      color: Colors.black54,
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
-                                                ),
+                                                ],
                                               ],
                                             ),
-                                            if (t.notes.isNotEmpty) ...[
-                                              const SizedBox(height: 6),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          
+                                          // Right: Amount, print button, and time
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    amountStr,
+                                                    style: GoogleFonts.montserrat(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: amountColor,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  GestureDetector(
+                                                    onTap: () => _showPrintReceiptDialog(context, t, amountStr, badgeText),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(5),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFFAF6EE),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(color: const Color(0xFFE5DEC9), width: 0.5),
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.print_rounded,
+                                                        size: 13,
+                                                        color: Color(0xFF735C0F),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
                                               Text(
-                                                t.notes,
+                                                timeStr,
                                                 style: GoogleFonts.montserrat(
-                                                  fontSize: 12,
-                                                  color: Colors.black54,
-                                                  fontStyle: FontStyle.italic,
+                                                  fontSize: 10,
+                                                  color: Colors.black45,
+                                                  fontWeight: FontWeight.w500,
                                                 ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ],
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   );
@@ -596,8 +671,10 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
+      );
+    },
       ),
     );
   }
@@ -781,22 +858,12 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                                 child: Column(
                                   children: [
                                     Text(
-                                      'SWARN KHATA',
+                                      'SWASTIK JEWELS',
                                       style: GoogleFonts.montserrat(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                         color: const Color(0xFF735C0F),
                                         letterSpacing: 1.0,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'PREMIUM GOLD & JEWELLERS',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[600],
-                                        letterSpacing: 0.5,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -1140,7 +1207,7 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                                   child: Column(
                                     children: [
                                       Text(
-                                        'SWARN KHATA STATEMENT',
+                                        'SWASTIK JEWELS',
                                         style: GoogleFonts.montserrat(
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,

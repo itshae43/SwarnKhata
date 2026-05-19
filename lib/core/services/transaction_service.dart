@@ -22,7 +22,51 @@ class TransactionService {
       date: transaction.date,
       createdAt: transaction.createdAt,
     );
-    await docRef.set(newTransaction.toMap());
+
+    final partyDocRef = _firestore
+        .collection('users')
+        .doc(transaction.userId)
+        .collection('parties')
+        .doc(transaction.partyId);
+
+    await _firestore.runTransaction((txn) async {
+      final partySnapshot = await txn.get(partyDocRef);
+      if (partySnapshot.exists) {
+        final partyData = partySnapshot.data()!;
+        double cashBalance = (partyData['cashBalance'] as num?)?.toDouble() ?? 0.0;
+        double goldBalance = (partyData['goldBalanceGrams'] as num?)?.toDouble() ?? 0.0;
+        double diamondBalance = (partyData['diamondBalanceCarats'] as num?)?.toDouble() ?? 0.0;
+
+        final isDebit = transaction.type == TransactionType.payment ||
+            transaction.type == TransactionType.sale ||
+            transaction.type == TransactionType.metalOut;
+
+        final isCredit = transaction.type == TransactionType.receipt ||
+            transaction.type == TransactionType.purchase ||
+            transaction.type == TransactionType.metalIn ||
+            transaction.type == TransactionType.return_;
+
+        if (transaction.metalType.isEmpty) {
+          if (isDebit) cashBalance += transaction.cashAmount;
+          if (isCredit) cashBalance -= transaction.cashAmount;
+        } else if (transaction.metalType == 'gold') {
+          if (isDebit) goldBalance += transaction.metalWeight;
+          if (isCredit) goldBalance -= transaction.metalWeight;
+        } else if (transaction.metalType == 'diamond') {
+          if (isDebit) diamondBalance += transaction.metalWeight;
+          if (isCredit) diamondBalance -= transaction.metalWeight;
+        }
+
+        txn.update(partyDocRef, {
+          'cashBalance': cashBalance,
+          'goldBalanceGrams': goldBalance,
+          'diamondBalanceCarats': diamondBalance,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      txn.set(docRef, newTransaction.toMap());
+    });
   }
 
   Stream<List<TransactionModel>> transactionsStream(String userId) {

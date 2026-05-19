@@ -14,7 +14,7 @@ class SettingsScreen extends ConsumerWidget {
     final isTablet = AppResponsive.isTablet(context);
 
     return Container(
-      color: const Color(0xFFFDFBF7),
+      color: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
       child: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -41,7 +41,9 @@ class SettingsScreen extends ConsumerWidget {
                 data: (UserModel? user) => _buildProfileCard(
                   user?.fullName ?? 'User',
                   user?.businessName ?? '',
-                  user?.email ?? user?.phone ?? '',
+                  (user?.phone == '+919671900007' || (user?.email.contains('admin_phone_9671900007') ?? false))
+                      ? ''
+                      : (user?.email ?? user?.phone ?? ''),
                   isTablet,
                 ),
                 loading: () => const Center(

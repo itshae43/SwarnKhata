@@ -78,6 +78,9 @@ class PartyNotifier extends Notifier<PartyState> {
         goldBalanceGrams: goldBalance,
         silverBalanceGrams: 0.0, // Default for now
         diamondBalanceCarats: diamondBalance,
+        openingCashBalance: cashBalance,
+        openingGoldBalanceGrams: goldBalance,
+        openingDiamondBalanceCarats: diamondBalance,
         createdAt: now,
         updatedAt: now,
       );

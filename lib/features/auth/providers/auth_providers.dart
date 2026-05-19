@@ -209,36 +209,22 @@ class OtpNotifier extends Notifier<OtpState> {
   Future<void> sendOtp(String phoneNumber) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
-    await _authService.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: (credential) async {
-        // Auto-verification (Android only)
-        try {
-          await _authService.signInWithOTP(
-            verificationId: state.verificationId ?? '',
-            smsCode: '',
-          );
-          state = state.copyWith(isLoading: false, isCodeSent: true);
-        } catch (_) {
-          state = state.copyWith(isLoading: false, isCodeSent: true);
-        }
-      },
-      verificationFailed: (e) {
-        state = state.copyWith(
-          isLoading: false,
-          error: e.message ?? 'Verification failed.',
-        );
-      },
-      codeSent: (verificationId, resendToken) {
-        state = state.copyWith(
-          isLoading: false,
-          isCodeSent: true,
-          verificationId: verificationId,
-        );
-      },
-      codeAutoRetrievalTimeout: (verificationId) {
-        state = state.copyWith(verificationId: verificationId);
-      },
+    // Normalize phone number (remove spaces, dashes, etc.)
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[\s\-()]+'), '');
+    if (cleanPhone != '+919671900007' && cleanPhone != '9671900007') {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'use admin number for login',
+      );
+      return;
+    }
+
+    // For admin number, we mock the OTP send flow to bypass Firebase phone auth billing check
+    await Future.delayed(const Duration(milliseconds: 800));
+    state = state.copyWith(
+      isLoading: false,
+      isCodeSent: true,
+      verificationId: 'mock_admin_verification_id',
     );
   }
 
@@ -249,6 +235,24 @@ class OtpNotifier extends Notifier<OtpState> {
       return false;
     }
     state = state.copyWith(isLoading: true, clearError: true);
+
+    if (state.verificationId == 'mock_admin_verification_id') {
+      try {
+        await _authService.signInMockAdmin();
+        state = state.copyWith(isLoading: false);
+        return true;
+      } on FirebaseAuthException catch (e) {
+        state = state.copyWith(
+          isLoading: false,
+          error: e.message ?? 'Authentication failed.',
+        );
+        return false;
+      } catch (e) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+        return false;
+      }
+    }
+
     try {
       await _authService.signInWithOTP(
         verificationId: state.verificationId!,

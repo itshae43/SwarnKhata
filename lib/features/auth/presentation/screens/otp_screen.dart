@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pinput/pinput.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
+import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   const OtpScreen({super.key});
@@ -59,8 +60,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
     if (!success && mounted) {
       final error = ref.read(otpNotifierProvider).error;
       _showSnack(error ?? 'Invalid OTP');
+    } else if (success && mounted) {
+      ref.read(navigationProvider.notifier).setIndex(0);
     }
-    // If success, auth state changes automatically and main navigator redirects
   }
 
   void _showSnack(String msg) {
@@ -125,7 +127,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
               const SizedBox(height: 8),
               Text(
                 otpState.isCodeSent
-                    ? 'Enter the 6-digit code sent to\n${_phoneController.text}'
+                    ? 'Enter the 6-digit code sent to your mobile'
                     : 'We\'ll send you a one-time password',
                 style: GoogleFonts.montserrat(
                   fontSize: 14,

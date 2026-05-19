@@ -22,6 +22,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
   bool _isSidebarCollapsed = false;
 
   // Persistent GlobalKey to reparent the bodyContent smoothly on orientation change
@@ -32,20 +34,28 @@ class _MainScreenState extends ConsumerState<MainScreen>
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 350),
     );
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeIn,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.96, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.02),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: Curves.easeOutCubic,
+      ),
     );
     _fadeController.forward();
-  }
-
-  @override
-  void didUpdateWidget(MainScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Restart animation on tab change
-    _fadeController.forward(from: 0.0);
   }
 
   @override
@@ -57,23 +67,34 @@ class _MainScreenState extends ConsumerState<MainScreen>
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
+    ref.listen<int>(navigationProvider, (previous, next) {
+      if (previous != next) {
+        _fadeController.forward(from: 0.0);
+      }
+    });
     final isTablet = AppResponsive.isTablet(context);
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final showSidebar = isTablet && isLandscape;
 
     Widget bodyContent = FadeTransition(
-      key: _bodyKey,
       opacity: _fadeAnimation,
-      child: IndexedStack(
-        index: currentIndex,
-        children: const [
-          HomeScreen(),
-          EntriesScreen(),
-          LedgerScreen(),
-          RemindersScreen(),
-          SettingsScreen(),
-        ],
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: IndexedStack(
+            key: _bodyKey,
+            index: currentIndex,
+            children: const [
+              HomeScreen(),
+              EntriesScreen(),
+              LedgerScreen(),
+              RemindersScreen(),
+              SettingsScreen(),
+            ],
+          ),
+        ),
       ),
     );
 
@@ -98,7 +119,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFBF7),
+      backgroundColor: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
       body: bodyContent,
       bottomNavigationBar: showSidebar ? null : const CustomBottomNavBar(),
     );

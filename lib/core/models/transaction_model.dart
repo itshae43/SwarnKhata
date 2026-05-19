@@ -81,6 +81,27 @@ class TransactionModel {
   }
 
   String get typeLabel {
+    final isCredit = type == TransactionType.receipt || type == TransactionType.metalIn;
+    final suffix = isCredit ? 'In' : 'Out';
+
+    if (metalType == 'gold') {
+      return 'Gold $suffix';
+    } else if (metalType == 'diamond') {
+      return 'Diamond $suffix';
+    } else if (metalType.isEmpty) {
+      if (type == TransactionType.receipt || type == TransactionType.payment) {
+        if (paymentMode == PaymentMode.cash) {
+          return 'Cash $suffix';
+        } else if (paymentMode == PaymentMode.upi) {
+          return 'UPI $suffix';
+        } else if (paymentMode == PaymentMode.rtgs) {
+          return 'RTGS $suffix';
+        } else if (paymentMode == PaymentMode.online) {
+          return 'Online $suffix';
+        }
+      }
+    }
+
     switch (type) {
       case TransactionType.sale: return 'Sale';
       case TransactionType.purchase: return 'Purchase';

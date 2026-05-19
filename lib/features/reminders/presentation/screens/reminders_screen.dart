@@ -35,7 +35,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen>
   Widget build(BuildContext context) {
     final isTablet = AppResponsive.isTablet(context);
     return Container(
-      color: const Color(0xFFFDFBF7),
+      color: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
       child: SafeArea(
         child: Column(
           children: [

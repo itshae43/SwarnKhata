@@ -190,15 +190,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required String diamond,
   }) {
     final dateStr = DateFormat('EEEE, d MMMM').format(DateTime.now());
+    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
 
-
-    return Container(
-      color: const Color(0xFFFAF6EE), // Beautiful warm beige/cream background
-      child: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24.0),
-          child: Column(
+    return GestureDetector(
+      onTap: () {
+        if (_searchFocusNode.hasFocus) {
+          _searchFocusNode.unfocus();
+        }
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Container(
+        color: const Color(0xFFFAF6EE), // Beautiful warm beige/cream background
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24.0),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header Section (Date and New Entry button)
@@ -273,6 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
+     ),
     );
   }
 
@@ -627,7 +635,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOutCubic,
-                        width: (_searchFocusNode.hasFocus || _searchQuery.isNotEmpty) ? 240.0 : 40.0,
+                        width: (!isPortrait || _searchFocusNode.hasFocus || _searchQuery.isNotEmpty) ? 240.0 : 40.0,
                         height: 40,
                         decoration: BoxDecoration(
                           color: const Color(0xFFFAF6EE),
@@ -646,7 +654,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           style: GoogleFonts.montserrat(fontSize: 13),
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
-                            hintText: (_searchFocusNode.hasFocus || _searchQuery.isNotEmpty) ? 'Search' : '',
+                            hintText: (!isPortrait || _searchFocusNode.hasFocus || _searchQuery.isNotEmpty) ? 'Search' : '',
                             hintStyle: GoogleFonts.montserrat(
                               color: const Color(0xFF5E543F).withOpacity(0.6),
                               fontSize: 13,
@@ -656,7 +664,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               size: 18,
                               color: Color(0xFF5E543F),
                             ),
-                            suffixIcon: (_searchFocusNode.hasFocus && _searchQuery.isNotEmpty)
+                            suffixIcon: ((!isPortrait || _searchFocusNode.hasFocus) && _searchQuery.isNotEmpty)
                                 ? IconButton(
                                     icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF5E543F)),
                                     onPressed: () {
@@ -664,7 +672,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       setState(() {
                                         _searchQuery = '';
                                       });
-                                      _searchFocusNode.unfocus();
+                                      if (isPortrait) {
+                                        _searchFocusNode.unfocus();
+                                      }
                                     },
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
@@ -1959,20 +1969,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   child: Column(
                                     children: [
                                       Text(
-                                        'SWARN KHATA',
+                                        'SWASTIK JEWELS',
                                         style: GoogleFonts.montserrat(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           color: const Color(0xFF735C0F),
                                           letterSpacing: 2,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Premium Ledger Statement',
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 10,
-                                          color: Colors.grey[600],
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -3125,6 +3127,9 @@ class _TabletQuickAddEntryDialogState
         displayStringForOption: (PartyModel option) => option.name,
         onSelected: (PartyModel selection) {
           setState(() => _selectedParty = selection);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _partyFocusNode.unfocus();
+          });
         },
         fieldViewBuilder:
             (context, textEditingController, focusNode, onFieldSubmitted) {

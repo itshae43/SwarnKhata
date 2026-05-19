@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import 'firebase_options.dart';
-import 'features/navigation/presentation/screens/auth_wrapper.dart';
+import 'features/auth/presentation/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +47,7 @@ class SwarnKhataApp extends StatelessWidget {
           ),
         );
       },
-      home: const AuthWrapper(),
+      home: const SplashScreen(),
     );
   }
 }

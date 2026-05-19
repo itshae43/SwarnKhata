@@ -5,6 +5,7 @@ import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
 import 'package:swarn_khata/features/auth/presentation/screens/signup_screen.dart';
 import 'package:swarn_khata/features/auth/presentation/screens/otp_screen.dart';
 import 'package:swarn_khata/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -46,6 +47,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     super.dispose();
   }
 
+  Route _createAnimatedRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(0.0, 0.08);
+        const end = Offset.zero;
+        const curve = Curves.easeOutCubic;
+
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var offsetAnimation = animation.drive(tween);
+        var fadeAnimation = animation.drive(
+          Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve)),
+        );
+
+        return FadeTransition(
+          opacity: fadeAnimation,
+          child: SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 400),
+    );
+  }
+
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
     final success = await ref.read(authNotifierProvider.notifier).signInWithEmail(
@@ -55,6 +82,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!success && mounted) {
       final error = ref.read(authNotifierProvider).error;
       _showSnack(error ?? 'Sign in failed');
+    } else if (success && mounted) {
+      ref.read(navigationProvider.notifier).setIndex(0);
     }
   }
 
@@ -63,6 +92,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!success && mounted) {
       final error = ref.read(authNotifierProvider).error;
       if (error != null) _showSnack(error);
+    } else if (success && mounted) {
+      ref.read(navigationProvider.notifier).setIndex(0);
     }
   }
 
@@ -132,9 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           child: GestureDetector(
                             onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordScreen(),
-                              ),
+                              _createAnimatedRoute(const ForgotPasswordScreen()),
                             ),
                             child: Text(
                               'Forgot Password?',
@@ -149,12 +178,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         const SizedBox(height: 28),
                         // ─── SIGN IN BUTTON ───────────────────────────
                         _buildSignInButton(authState),
-                        const SizedBox(height: 24),
-                        // ─── DIVIDER ──────────────────────────────────
-                        _buildDivider(),
-                        const SizedBox(height: 20),
-                        // ─── GOOGLE BUTTON ────────────────────────────
-                        _buildGoogleButton(authState),
                         const SizedBox(height: 20),
                         // ─── PHONE OTP BUTTON ─────────────────────────
                         _buildPhoneButton(),
@@ -352,7 +375,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       child: OutlinedButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const OtpScreen()),
+          _createAnimatedRoute(const OtpScreen()),
         ),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.grey[300]!),
@@ -394,7 +417,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         GestureDetector(
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const SignupScreen()),
+            _createAnimatedRoute(const SignupScreen()),
           ),
           child: Text(
             'Sign up',

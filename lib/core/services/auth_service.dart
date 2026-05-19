@@ -138,6 +138,37 @@ class AuthService {
     return userCredential;
   }
 
+  Future<UserCredential> signInMockAdmin() async {
+    const email = 'admin_phone_9671900007@swarnkhata.com';
+    const password = 'SwarnKhataAdmin9671900007';
+    try {
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'wrong-password') {
+        // Create the user
+        final credential = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        await credential.user!.updateDisplayName('Swastik Admin');
+        await _saveUserToFirestore(
+          uid: credential.user!.uid,
+          fullName: 'Swastik Admin',
+          businessName: 'Swastik Jewels',
+          email: email,
+          phone: '+919671900007',
+          photoUrl: '',
+          authProvider: 'phone',
+        );
+        return credential;
+      }
+      rethrow;
+    }
+  }
+
   // ─── FORGOT PASSWORD ────────────────────────────────────────────
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());

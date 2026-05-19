@@ -12,6 +12,9 @@ class PartyModel {
   final double goldBalanceGrams; // positive = they owe, negative = you owe
   final double silverBalanceGrams;
   final double diamondBalanceCarats;
+  final double openingCashBalance;
+  final double openingGoldBalanceGrams;
+  final double openingDiamondBalanceCarats;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -27,11 +30,18 @@ class PartyModel {
     required this.goldBalanceGrams,
     required this.silverBalanceGrams,
     required this.diamondBalanceCarats,
+    required this.openingCashBalance,
+    required this.openingGoldBalanceGrams,
+    required this.openingDiamondBalanceCarats,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory PartyModel.fromMap(String id, Map<String, dynamic> map) {
+    final cash = (map['cashBalance'] as num?)?.toDouble() ?? 0.0;
+    final gold = (map['goldBalanceGrams'] as num?)?.toDouble() ?? 0.0;
+    final diamond = (map['diamondBalanceCarats'] as num?)?.toDouble() ?? 0.0;
+    
     return PartyModel(
       id: id,
       userId: map['userId'] as String? ?? '',
@@ -40,10 +50,13 @@ class PartyModel {
       phone: map['phone'] as String? ?? '',
       email: map['email'] as String? ?? '',
       address: map['address'] as String? ?? '',
-      cashBalance: (map['cashBalance'] as num?)?.toDouble() ?? 0.0,
-      goldBalanceGrams: (map['goldBalanceGrams'] as num?)?.toDouble() ?? 0.0,
+      cashBalance: cash,
+      goldBalanceGrams: gold,
       silverBalanceGrams: (map['silverBalanceGrams'] as num?)?.toDouble() ?? 0.0,
-      diamondBalanceCarats: (map['diamondBalanceCarats'] as num?)?.toDouble() ?? 0.0,
+      diamondBalanceCarats: diamond,
+      openingCashBalance: (map['openingCashBalance'] as num?)?.toDouble() ?? cash,
+      openingGoldBalanceGrams: (map['openingGoldBalanceGrams'] as num?)?.toDouble() ?? gold,
+      openingDiamondBalanceCarats: (map['openingDiamondBalanceCarats'] as num?)?.toDouble() ?? diamond,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -61,6 +74,9 @@ class PartyModel {
       'goldBalanceGrams': goldBalanceGrams,
       'silverBalanceGrams': silverBalanceGrams,
       'diamondBalanceCarats': diamondBalanceCarats,
+      'openingCashBalance': openingCashBalance,
+      'openingGoldBalanceGrams': openingGoldBalanceGrams,
+      'openingDiamondBalanceCarats': openingDiamondBalanceCarats,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -85,5 +101,43 @@ class PartyModel {
     if (diamondBalanceCarats > 0) return 'Dr (To Receive)';
     if (diamondBalanceCarats < 0) return 'Cr (To Give)';
     return 'Settled';
+  }
+
+  PartyModel copyWith({
+    String? id,
+    String? userId,
+    String? name,
+    String? type,
+    String? phone,
+    String? email,
+    String? address,
+    double? cashBalance,
+    double? goldBalanceGrams,
+    double? silverBalanceGrams,
+    double? diamondBalanceCarats,
+    double? openingCashBalance,
+    double? openingGoldBalanceGrams,
+    double? openingDiamondBalanceCarats,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return PartyModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      address: address ?? this.address,
+      cashBalance: cashBalance ?? this.cashBalance,
+      goldBalanceGrams: goldBalanceGrams ?? this.goldBalanceGrams,
+      silverBalanceGrams: silverBalanceGrams ?? this.silverBalanceGrams,
+      diamondBalanceCarats: diamondBalanceCarats ?? this.diamondBalanceCarats,
+      openingCashBalance: openingCashBalance ?? this.openingCashBalance,
+      openingGoldBalanceGrams: openingGoldBalanceGrams ?? this.openingGoldBalanceGrams,
+      openingDiamondBalanceCarats: openingDiamondBalanceCarats ?? this.openingDiamondBalanceCarats,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
 import 'package:swarn_khata/features/auth/presentation/screens/login_screen.dart';
+import 'package:swarn_khata/features/navigation/presentation/providers/navigation_provider.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -65,6 +66,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     if (!success && mounted) {
       final error = ref.read(authNotifierProvider).error;
       _showSnack(error ?? 'Sign up failed');
+    } else if (success && mounted) {
+      ref.read(navigationProvider.notifier).setIndex(0);
     }
   }
 
@@ -73,6 +76,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     if (!success && mounted) {
       final error = ref.read(authNotifierProvider).error;
       if (error != null) _showSnack(error);
+    } else if (success && mounted) {
+      ref.read(navigationProvider.notifier).setIndex(0);
     }
   }
 
@@ -210,12 +215,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                         const SizedBox(height: 28),
                         // ─── CREATE ACCOUNT BUTTON ────────────────────────
                         _buildCreateButton(authState),
-                        const SizedBox(height: 22),
-                        // ─── DIVIDER ──────────────────────────────────
-                        _buildDivider(),
-                        const SizedBox(height: 18),
-                        // ─── GOOGLE BUTTON ────────────────────────────
-                        _buildGoogleButton(authState),
                         const SizedBox(height: 28),
                         // ─── SIGN IN LINK ─────────────────────────────
                         _buildSignInLink(),

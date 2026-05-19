@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import '../../providers/party_providers.dart';
 
 class AddPartyScreen extends ConsumerStatefulWidget {
@@ -43,10 +44,11 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = AppResponsive.isTablet(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFBF7),
+      backgroundColor: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFDFBF7),
+        backgroundColor: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6B5800)),
@@ -63,8 +65,13 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
+        child: Center(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: isTablet ? 720 : double.infinity,
+            ),
+            child: Column(
+              children: [
             // Form
             Expanded(
               child: SingleChildScrollView(
@@ -442,7 +449,7 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
             // Save Button
             Container(
               padding: const EdgeInsets.all(16.0),
-              color: const Color(0xFFFDFBF7),
+              color: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
               child: SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -545,7 +552,9 @@ class _AddPartyScreenState extends ConsumerState<AddPartyScreen> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildTransactionTypeButton({

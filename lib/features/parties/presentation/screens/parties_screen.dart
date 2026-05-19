@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/core/models/party_model.dart';
 import 'package:swarn_khata/features/parties/providers/party_providers.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import 'party_detail_screen.dart';
 
 class PartiesScreen extends ConsumerStatefulWidget {
@@ -18,8 +19,9 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = AppResponsive.isTablet(context);
     return Container(
-      color: const Color(0xFFFDFBF7),
+      color: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
       child: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -321,11 +323,11 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
 
     // Map amounts from Model
     String totalCashDue = '₹${party.cashBalance.abs().toStringAsFixed(0)}';
-    String cashDueLabel = party.cashBalance >= 0 ? 'They Owe' : 'You Owe';
+    String cashDueLabel = party.cashBalance >= 0 ? 'In' : 'Out';
     bool isCashYouOwe = party.cashBalance < 0;
 
     String totalGoldDue = '${party.goldBalanceGrams.abs().toStringAsFixed(3)} g';
-    String goldDueLabel = party.goldBalanceGrams >= 0 ? 'They Owe' : 'You Owe';
+    String goldDueLabel = party.goldBalanceGrams >= 0 ? 'In' : 'Out';
     bool isGoldYouOwe = party.goldBalanceGrams < 0;
 
     return PartyDetail(

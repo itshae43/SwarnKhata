@@ -53,8 +53,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
     final isTablet = AppResponsive.isTablet(context);
     if (isTablet) {
       final double size = baseStyle.fontSize ?? 14;
+      final double scaledSize = size >= 20 ? size + 4.0 : size + 3.0;
       return GoogleFonts.montserrat(
-        fontSize: size + 1.5,
+        fontSize: scaledSize,
         fontWeight: baseStyle.fontWeight,
         color: baseStyle.color,
         letterSpacing: baseStyle.letterSpacing,
@@ -87,14 +88,19 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFBF7),
+      backgroundColor: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: isTablet ? 32.0 : 20.0,
-            vertical: isTablet ? 28.0 : 24.0,
-          ),
-          child: Column(
+        child: Center(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: isTablet ? 720 : double.infinity,
+            ),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 32.0 : 20.0,
+                vertical: isTablet ? 28.0 : 24.0,
+              ),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
@@ -996,7 +1002,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildPartyAutocomplete(bool isTablet) {
@@ -1024,6 +1032,9 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
         displayStringForOption: (PartyModel option) => option.name,
         onSelected: (PartyModel selection) {
           setState(() => _selectedParty = selection);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _partyFocusNode.unfocus();
+          });
         },
         fieldViewBuilder:
             (context, textEditingController, focusNode, onFieldSubmitted) {

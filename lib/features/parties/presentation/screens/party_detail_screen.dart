@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/core/models/transaction_model.dart';
+import 'package:swarn_khata/core/models/party_model.dart';
 import 'package:swarn_khata/features/ledger/providers/transaction_providers.dart';
+import 'package:swarn_khata/features/parties/providers/party_providers.dart';
 import 'package:swarn_khata/features/reminders/providers/reminder_providers.dart';
 import 'package:swarn_khata/core/models/reminder_model.dart';
 import 'package:swarn_khata/core/utils/communication_utils.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import 'package:intl/intl.dart';
 
 // ──────────────────────────── DATA MODELS ────────────────────────────
@@ -39,8 +42,8 @@ class PartyDetail {
   final String location; // e.g. "Mumbai"
   final String initial;
   final String totalCashDue;
-  final String cashDueLabel; // e.g. "You Owe" or "They Owe"
-  final bool isCashYouOwe; // true = You Owe (red arrow up), false = They Owe (blue arrow down)
+  final String cashDueLabel; // e.g. "Out" or "In"
+  final bool isCashYouOwe; // true = Out (red arrow up), false = In (blue arrow down)
   final String totalGoldDue;
   final String goldDueLabel;
   final bool isGoldYouOwe;
@@ -79,7 +82,7 @@ class PartyDetailScreen extends ConsumerStatefulWidget {
 
 class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
   String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Money', 'Diamond', 'Gold'];
+  final List<String> _filters = ['All', 'Cash', 'UPI/RTGS', 'Gold', 'Diamond'];
   String _selectedTab = 'Transactions';
   String _selectedReminderTime = 'Tomorrow';
   final TextEditingController _reminderMsgController = TextEditingController();
@@ -108,17 +111,27 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
   List<TransactionModel> _getFilteredTransactions(List<TransactionModel> transactions) {
     if (_selectedFilter == 'All') return transactions;
     return transactions.where((t) {
-      if (_selectedFilter == 'Money' && t.metalType.isEmpty) return true;
-      if (_selectedFilter == 'Gold' && t.metalType == 'gold') return true;
-      if (_selectedFilter == 'Diamond' && t.metalType == 'diamond') return true;
+      if (_selectedFilter == 'Cash') {
+        return t.metalType.isEmpty && t.paymentMode == PaymentMode.cash;
+      }
+      if (_selectedFilter == 'UPI/RTGS') {
+        return t.metalType.isEmpty && (t.paymentMode == PaymentMode.upi || t.paymentMode == PaymentMode.rtgs || t.paymentMode == PaymentMode.online);
+      }
+      if (_selectedFilter == 'Gold') {
+        return t.metalType == 'gold';
+      }
+      if (_selectedFilter == 'Diamond') {
+        return t.metalType == 'diamond';
+      }
       return false;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = AppResponsive.isTablet(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFBF7),
+      backgroundColor: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
       body: SafeArea(
         child: Column(
           children: [
@@ -261,26 +274,158 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
 
   // ─── DUE SUMMARY CARDS ──────────────────────────────────────
   Widget _buildDueSummaryCards() {
+    final transactionsAsync = ref.watch(partyTransactionsStreamProvider(widget.party.id));
+    final transactions = transactionsAsync.value ?? [];
+
+    final partiesAsync = ref.watch(partiesStreamProvider);
+    final parties = partiesAsync.value ?? [];
+    final partyModel = parties.firstWhere(
+      (p) => p.id == widget.party.id,
+      orElse: () => PartyModel(
+        id: widget.party.id,
+        userId: '',
+        name: widget.party.name,
+        type: widget.party.type,
+        phone: widget.party.phone,
+        email: '',
+        address: widget.party.location,
+        cashBalance: 0.0,
+        goldBalanceGrams: 0.0,
+        silverBalanceGrams: 0.0,
+        diamondBalanceCarats: 0.0,
+        openingCashBalance: 0.0,
+        openingGoldBalanceGrams: 0.0,
+        openingDiamondBalanceCarats: 0.0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+
+    double cashBalance = partyModel.openingCashBalance;
+    double onlineBalance = 0.0;
+    double goldBalance = partyModel.openingGoldBalanceGrams;
+    double diamondBalance = partyModel.openingDiamondBalanceCarats;
+
+    for (final t in transactions) {
+      final isDebit = t.type == TransactionType.payment ||
+          t.type == TransactionType.sale ||
+          t.type == TransactionType.metalOut;
+
+      final isCredit = t.type == TransactionType.receipt ||
+          t.type == TransactionType.purchase ||
+          t.type == TransactionType.metalIn ||
+          t.type == TransactionType.return_;
+
+      if (t.metalType.isEmpty) {
+        final val = t.cashAmount;
+        if (t.paymentMode == PaymentMode.cash) {
+          if (isDebit) cashBalance += val;
+          if (isCredit) cashBalance -= val;
+        } else {
+          if (isDebit) onlineBalance += val;
+          if (isCredit) onlineBalance -= val;
+        }
+      } else if (t.metalType == 'gold') {
+        if (isDebit) goldBalance += t.metalWeight;
+        if (isCredit) goldBalance -= t.metalWeight;
+      } else if (t.metalType == 'diamond') {
+        if (isDebit) diamondBalance += t.metalWeight;
+        if (isCredit) diamondBalance -= t.metalWeight;
+      }
+    }
+
+    // Self-healing check: if the stored balances in partyModel differ from the calculated ones,
+    // we update the Firestore document so that other screens (like the Parties list) stay in sync.
+    final calculatedTotalCash = cashBalance + onlineBalance;
+    if ((partyModel.cashBalance - calculatedTotalCash).abs() > 0.01 ||
+        (partyModel.goldBalanceGrams - goldBalance).abs() > 0.001 ||
+        (partyModel.diamondBalanceCarats - diamondBalance).abs() > 0.01) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(partyServiceProvider).updateParty(
+          partyModel.copyWith(
+            cashBalance: calculatedTotalCash,
+            goldBalanceGrams: goldBalance,
+            diamondBalanceCarats: diamondBalance,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      });
+    }
+
+    final String displayCash = '₹${NumberFormat.decimalPattern('en_IN').format(cashBalance.abs().toStringAsFixed(0) == "0" ? 0 : cashBalance.abs())}';
+    final String displayOnline = '₹${NumberFormat.decimalPattern('en_IN').format(onlineBalance.abs().toStringAsFixed(0) == "0" ? 0 : onlineBalance.abs())}';
+    final String displayGold = '${goldBalance.abs() % 1 == 0 ? goldBalance.abs().toInt().toString() : goldBalance.abs().toStringAsFixed(3).replaceAll(RegExp(r"\.?0+$"), "")} g';
+    final String displayDiamond = '${diamondBalance.abs() % 1 == 0 ? diamondBalance.abs().toInt().toString() : diamondBalance.abs().toStringAsFixed(2).replaceAll(RegExp(r"\.?0+$"), "")} ct';
+
+    final isTablet = AppResponsive.isTablet(context);
+
+    final cashCard = _buildDueCard(
+      label: 'Total Cash Due',
+      value: displayCash,
+      statusLabel: cashBalance > 0 ? 'In' : (cashBalance < 0 ? 'Out' : 'Settled'),
+      isYouOwe: cashBalance < 0,
+      numericValue: cashBalance,
+    );
+
+    final onlineCard = _buildDueCard(
+      label: 'Total UPI/RTGS Due',
+      value: displayOnline,
+      statusLabel: onlineBalance > 0 ? 'In' : (onlineBalance < 0 ? 'Out' : 'Settled'),
+      isYouOwe: onlineBalance < 0,
+      numericValue: onlineBalance,
+    );
+
+    final goldCard = _buildDueCard(
+      label: 'Total Gold Due',
+      value: displayGold,
+      statusLabel: goldBalance > 0 ? 'In' : (goldBalance < 0 ? 'Out' : 'Settled'),
+      isYouOwe: goldBalance < 0,
+      numericValue: goldBalance,
+    );
+
+    final diamondCard = _buildDueCard(
+      label: 'Total Diamond Due',
+      value: displayDiamond,
+      statusLabel: diamondBalance > 0 ? 'In' : (diamondBalance < 0 ? 'Out' : 'Settled'),
+      isYouOwe: diamondBalance < 0,
+      numericValue: diamondBalance,
+    );
+
+    if (isTablet) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(child: cashCard),
+            const SizedBox(width: 12),
+            Expanded(child: onlineCard),
+            const SizedBox(width: 12),
+            Expanded(child: goldCard),
+            const SizedBox(width: 12),
+            Expanded(child: diamondCard),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _buildDueCard(
-              label: 'Total Cash Due',
-              value: widget.party.totalCashDue,
-              statusLabel: widget.party.cashDueLabel,
-              isYouOwe: widget.party.isCashYouOwe,
-            ),
+          Row(
+            children: [
+              Expanded(child: cashCard),
+              const SizedBox(width: 12),
+              Expanded(child: onlineCard),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildDueCard(
-              label: 'Total Gold Due',
-              value: widget.party.totalGoldDue,
-              statusLabel: widget.party.goldDueLabel,
-              isYouOwe: widget.party.isGoldYouOwe,
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: goldCard),
+              const SizedBox(width: 12),
+              Expanded(child: diamondCard),
+            ],
           ),
         ],
       ),
@@ -292,12 +437,20 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
     required String value,
     required String statusLabel,
     required bool isYouOwe,
+    required double numericValue,
   }) {
-    final statusColor = isYouOwe ? const Color(0xFFC62828) : const Color(0xFF2852C6);
-    final arrowIcon = isYouOwe ? Icons.north_east : Icons.south_west;
-    final bgDecorColor = isYouOwe
-        ? const Color(0xFFC62828).withOpacity(0.06)
-        : const Color(0xFF2852C6).withOpacity(0.06);
+    final bool isSettled = numericValue.abs() < 0.0001; // Avoid double precision floating issues
+    final statusColor = isSettled 
+        ? Colors.grey[600]! 
+        : (isYouOwe ? const Color(0xFFC62828) : const Color(0xFF2852C6));
+    final arrowIcon = isSettled 
+        ? Icons.done_all_rounded 
+        : (isYouOwe ? Icons.north_east : Icons.south_west);
+    final bgDecorColor = isSettled
+        ? Colors.grey.withOpacity(0.04)
+        : (isYouOwe
+            ? const Color(0xFFC62828).withOpacity(0.06)
+            : const Color(0xFF2852C6).withOpacity(0.06));
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -344,7 +497,7 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
               Text(
                 value,
                 style: GoogleFonts.montserrat(
-                  fontSize: 22,
+                  fontSize: 18, // Slightly reduced to prevent overflow for ₹ currency symbol and long amounts
                   fontWeight: FontWeight.bold,
                   color: statusColor,
                   letterSpacing: -0.5,
@@ -1165,43 +1318,47 @@ class _PartyDetailScreenState extends ConsumerState<PartyDetailScreen> {
   // ─── FILTER TABS ────────────────────────────────────────────
   Widget _buildFilterTabs() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Color(0xFFE0D8CA), width: 1),
         ),
       ),
-      child: Row(
-        children: _filters.map((filter) {
-          final isSelected = _selectedFilter == filter;
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedFilter = filter;
-              });
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 24),
-              padding: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: isSelected ? const Color(0xFF4A3E1F) : Colors.transparent,
-                    width: 2.5,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: _filters.map((filter) {
+            final isSelected = _selectedFilter == filter;
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedFilter = filter;
+                });
+              },
+              child: Container(
+                margin: const EdgeInsets.only(right: 24),
+                padding: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isSelected ? const Color(0xFF4A3E1F) : Colors.transparent,
+                      width: 2.5,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  filter,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? const Color(0xFF4A3E1F) : Colors.grey[500],
                   ),
                 ),
               ),
-              child: Text(
-                filter,
-                style: GoogleFonts.montserrat(
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? const Color(0xFF4A3E1F) : Colors.grey[500],
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

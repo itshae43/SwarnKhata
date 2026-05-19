@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swarn_khata/core/utils/responsive_utils.dart';
 import '../../providers/party_providers.dart';
 
 class QuickAddPartyBottomSheet extends ConsumerStatefulWidget {
@@ -27,10 +28,11 @@ class _QuickAddPartyBottomSheetState extends ConsumerState<QuickAddPartyBottomSh
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = AppResponsive.isTablet(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFFDFBF7),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: isTablet ? const Color(0xFFFAF6EE) : const Color(0xFFFDFBF7),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
         left: 20,
