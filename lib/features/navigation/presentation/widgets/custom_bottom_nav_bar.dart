@@ -71,7 +71,7 @@ class CustomBottomNavBar extends ConsumerWidget {
                     children: [
                       _NavBarItem(
                         icon: Icons.home_rounded,
-                        label: 'Home',
+                        label: 'Dashboard',
                         isSelected: currentIndex == 0,
                         isTablet: isTablet,
                         onTap: () => ref.read(navigationProvider.notifier).setIndex(0),

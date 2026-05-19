@@ -1,10 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/core/models/user_model.dart';
+import 'package:swarn_khata/core/models/session_model.dart';
 import 'package:swarn_khata/core/services/auth_service.dart';
+import 'package:swarn_khata/core/services/session_service.dart';
 
 // ─── AUTH SERVICE PROVIDER ──────────────────────────────────────────
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
+
+// ─── SESSION SERVICE PROVIDER ───────────────────────────────────────
+final sessionServiceProvider = Provider<SessionService>((ref) => SessionService());
 
 // ─── FIREBASE AUTH USER STREAM ──────────────────────────────────────
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -21,6 +26,19 @@ final currentUserProvider = StreamProvider<UserModel?>((ref) {
     },
     loading: () => Stream.value(null),
     error: (_, __) => Stream.value(null),
+  );
+});
+
+// ─── ACTIVE SESSIONS PROVIDER ───────────────────────────────────────
+final activeSessionsProvider = StreamProvider<List<SessionModel>>((ref) {
+  final authState = ref.watch(authStateProvider);
+  return authState.when(
+    data: (user) {
+      if (user == null) return Stream.value([]);
+      return ref.watch(sessionServiceProvider).getSessionsStream(user.uid);
+    },
+    loading: () => Stream.value([]),
+    error: (_, __) => Stream.value([]),
   );
 });
 
@@ -149,6 +167,25 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> signOut() async {
+    try {
+      final user = _authService.currentUser;
+      if (user != null) {
+        final sessionId = await ref.read(sessionServiceProvider).getLocalSessionId();
+        if (sessionId != null) {
+          await ref
+              .read(sessionServiceProvider)
+              .deleteSession(user.uid, sessionId)
+              .timeout(const Duration(seconds: 2));
+        }
+      }
+    } catch (e) {
+      // Ignore errors during session deletion
+    }
+    
+    try {
+      await ref.read(sessionServiceProvider).clearLocalSessionId();
+    } catch (_) {}
+    
     await _authService.signOut();
     state = const AuthState();
   }
@@ -206,29 +243,35 @@ class OtpNotifier extends Notifier<OtpState> {
 
   AuthService get _authService => ref.read(authServiceProvider);
 
-  Future<void> sendOtp(String phoneNumber) async {
+  Future<void> sendOtp(String phoneNumber, {required String role}) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     // Normalize phone number (remove spaces, dashes, etc.)
     final cleanPhone = phoneNumber.replaceAll(RegExp(r'[\s\-()]+'), '');
-    if (cleanPhone != '+919671900007' && cleanPhone != '9671900007') {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'use admin number for login',
-      );
-      return;
+    if (role == 'admin') {
+      if (cleanPhone != '+919671900007' && cleanPhone != '9671900007') {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'use admin number for login',
+        );
+        return;
+      }
     }
 
-    // For admin number, we mock the OTP send flow to bypass Firebase phone auth billing check
+    // For both, mock the OTP send flow to bypass Firebase phone auth billing check
     await Future.delayed(const Duration(milliseconds: 800));
     state = state.copyWith(
       isLoading: false,
       isCodeSent: true,
-      verificationId: 'mock_admin_verification_id',
+      verificationId: role == 'admin' ? 'mock_admin_verification_id' : 'mock_other_verification_id',
     );
   }
 
-  Future<bool> verifyOtp(String smsCode) async {
+  Future<bool> verifyOtp(String smsCode, {
+    required String role,
+    required String phone,
+    String? name,
+  }) async {
     if (state.verificationId == null) {
       state = state.copyWith(
           error: 'Verification ID missing. Please resend OTP.');
@@ -239,6 +282,24 @@ class OtpNotifier extends Notifier<OtpState> {
     if (state.verificationId == 'mock_admin_verification_id') {
       try {
         await _authService.signInMockAdmin();
+        state = state.copyWith(isLoading: false);
+        return true;
+      } on FirebaseAuthException catch (e) {
+        state = state.copyWith(
+          isLoading: false,
+          error: e.message ?? 'Authentication failed.',
+        );
+        return false;
+      } catch (e) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+        return false;
+      }
+    } else if (state.verificationId == 'mock_other_verification_id') {
+      try {
+        await _authService.signInMockOther(
+          phone: phone,
+          name: name ?? 'Other User',
+        );
         state = state.copyWith(isLoading: false);
         return true;
       } on FirebaseAuthException catch (e) {

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
 import 'package:swarn_khata/core/models/user_model.dart';
 import 'package:swarn_khata/core/utils/responsive_utils.dart';
+import 'device_management_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -65,9 +66,16 @@ class SettingsScreen extends ConsumerWidget {
                 isTablet: isTablet,
               ),
               _buildSettingsTile(
-                icon: Icons.lock_outline_rounded,
-                label: 'Change Password',
-                onTap: () {},
+                icon: Icons.devices_rounded,
+                label: 'Device Management',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DeviceManagementScreen(),
+                    ),
+                  );
+                },
                 isTablet: isTablet,
               ),
               _buildSettingsTile(

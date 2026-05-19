@@ -17,6 +17,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
     with SingleTickerProviderStateMixin {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+  final _nameController = TextEditingController();
+  String _selectedRole = 'admin'; // 'admin' or 'other'
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
@@ -36,6 +38,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
     _animController.dispose();
     _phoneController.dispose();
     _otpController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -45,9 +48,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
       _showSnack('Enter a valid phone number');
       return;
     }
+    if (_selectedRole == 'other') {
+      final name = _nameController.text.trim();
+      if (name.isEmpty) {
+        _showSnack('Enter your name');
+        return;
+      }
+    }
     // Prepend country code if not present
     final fullPhone = phone.startsWith('+') ? phone : '+91$phone';
-    await ref.read(otpNotifierProvider.notifier).sendOtp(fullPhone);
+    await ref.read(otpNotifierProvider.notifier).sendOtp(fullPhone, role: _selectedRole);
   }
 
   Future<void> _verifyOtp() async {
@@ -56,7 +66,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
       _showSnack('Enter the 6-digit OTP');
       return;
     }
-    final success = await ref.read(otpNotifierProvider.notifier).verifyOtp(code);
+    final phone = _phoneController.text.trim();
+    final fullPhone = phone.startsWith('+') ? phone : '+91$phone';
+    final name = _selectedRole == 'other' ? _nameController.text.trim() : null;
+
+    final success = await ref.read(otpNotifierProvider.notifier).verifyOtp(
+          code,
+          role: _selectedRole,
+          phone: fullPhone,
+          name: name,
+        );
     if (!success && mounted) {
       final error = ref.read(otpNotifierProvider).error;
       _showSnack(error ?? 'Invalid OTP');
@@ -139,6 +158,129 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
               const SizedBox(height: 40),
 
               if (!otpState.isCodeSent) ...[
+                // ─── ROLE SELECTOR ─────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAF6EE),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedRole = 'admin';
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _selectedRole == 'admin'
+                                  ? const Color(0xFFD4B13B)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Admin',
+                              style: GoogleFonts.montserrat(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: _selectedRole == 'admin'
+                                    ? Colors.white
+                                    : const Color(0xFF8A7311),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedRole = 'other';
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _selectedRole == 'other'
+                                  ? const Color(0xFFD4B13B)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Other User',
+                              style: GoogleFonts.montserrat(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: _selectedRole == 'other'
+                                    ? Colors.white
+                                    : const Color(0xFF8A7311),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ─── NAME INPUT (Condition: Other User) ───────
+                if (_selectedRole == 'other') ...[
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              right: BorderSide(color: Colors.grey[200]!),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline_rounded,
+                            color: Color(0xFF8A7311),
+                            size: 20,
+                          ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _nameController,
+                            keyboardType: TextInputType.name,
+                            textCapitalization: TextCapitalization.words,
+                            style: GoogleFonts.montserrat(fontSize: 16),
+                            decoration: InputDecoration(
+                              hintText: 'Enter your name',
+                              hintStyle: GoogleFonts.montserrat(
+                                color: Colors.grey[400],
+                                fontSize: 14,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // ─── PHONE INPUT ───────────────────────────────
                 Container(
                   decoration: BoxDecoration(
@@ -174,7 +316,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                           ],
                           style: GoogleFonts.montserrat(fontSize: 16),
                           decoration: InputDecoration(
-                            hintText: 'Enter mobile number',
+                            hintText: _selectedRole == 'admin'
+                                ? 'Enter admin mobile number'
+                                : 'Enter mobile number',
                             hintStyle: GoogleFonts.montserrat(
                               color: Colors.grey[400],
                               fontSize: 14,

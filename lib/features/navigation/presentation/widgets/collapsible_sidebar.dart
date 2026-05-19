@@ -118,7 +118,7 @@ class CollapsibleSidebar extends ConsumerWidget {
                 children: [
                   _SidebarItem(
                     icon: Icons.home,
-                    label: 'Home',
+                    label: 'Dashboard',
                     isSelected: currentIndex == 0,
                     isCollapsed: isCollapsed,
                     onTap: () => onTap(0),

@@ -826,7 +826,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Expanded(
                   flex: amountFlex,
                   child: Text(
-                    'AMOUNT',
+                    'VALUE',
                     style: GoogleFonts.montserrat(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

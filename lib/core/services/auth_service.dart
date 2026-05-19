@@ -169,6 +169,41 @@ class AuthService {
     }
   }
 
+  Future<UserCredential> signInMockOther({
+    required String phone,
+    required String name,
+  }) async {
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]+'), '');
+    final email = 'other_phone_${cleanPhone}@swarnkhata.com';
+    final password = 'SwarnKhataOther_${cleanPhone}';
+    try {
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'wrong-password') {
+        // Create the user
+        final credential = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        await credential.user!.updateDisplayName(name);
+        await _saveUserToFirestore(
+          uid: credential.user!.uid,
+          fullName: name,
+          businessName: '',
+          email: email,
+          phone: phone,
+          photoUrl: '',
+          authProvider: 'phone',
+        );
+        return credential;
+      }
+      rethrow;
+    }
+  }
+
   // ─── FORGOT PASSWORD ────────────────────────────────────────────
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());
