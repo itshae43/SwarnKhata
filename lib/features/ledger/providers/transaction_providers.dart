@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/core/models/transaction_model.dart';
 import 'package:swarn_khata/core/services/transaction_service.dart';
@@ -63,8 +64,8 @@ class TransactionNotifier extends Notifier<TransactionState> {
     required String notes,
     required DateTime date,
   }) async {
-    final user = ref.read(currentUserProvider).value;
-    if (user == null) {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
       state = state.copyWith(error: 'User not authenticated');
       return false;
     }
@@ -74,7 +75,7 @@ class TransactionNotifier extends Notifier<TransactionState> {
       final now = DateTime.now();
       final transaction = TransactionModel(
         id: '', 
-        userId: user.uid,
+        userId: firebaseUser.uid,
         partyId: partyId,
         partyName: partyName,
         partyPhone: partyPhone,

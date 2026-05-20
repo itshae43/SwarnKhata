@@ -226,6 +226,15 @@ class _EntriesScreenState extends ConsumerState<EntriesScreen> {
                       );
                       if (newId != null && newId is String) {
                         setState(() => _pendingPartyId = newId);
+                        final parties = ref.read(partiesStreamProvider).value ?? [];
+                        final found = parties.where((p) => p.id == newId).firstOrNull;
+                        if (found != null) {
+                          setState(() {
+                            _selectedParty = found;
+                            _partyController.text = found.name;
+                            _pendingPartyId = null;
+                          });
+                        }
                       }
                     },
                     borderRadius: BorderRadius.circular(20),

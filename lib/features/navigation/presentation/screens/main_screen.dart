@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/core/utils/responsive_utils.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../../../auth/providers/auth_providers.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../../entries/presentation/screens/entries_screen.dart';
 import '../../../ledger/presentation/screens/ledger_screen.dart';
@@ -64,12 +67,82 @@ class _MainScreenState extends ConsumerState<MainScreen>
     super.dispose();
   }
 
+  void _showLoginRequestDialog(Map<String, dynamic> request) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Login Request',
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'User ${request['name']} (${request['phone']}) is trying to log in. Do you approve?',
+            style: GoogleFonts.montserrat(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection('login_requests')
+                    .doc(request['id'])
+                    .update({'status': 'declined'});
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Decline',
+                style: GoogleFonts.montserrat(color: Colors.red),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection('login_requests')
+                    .doc(request['id'])
+                    .update({'status': 'approved'});
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D4A1E),
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Approve',
+                style: GoogleFonts.montserrat(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
     ref.listen<int>(navigationProvider, (previous, next) {
       if (previous != next) {
         _fadeController.forward(from: 0.0);
+      }
+    });
+
+    ref.listen<AsyncValue<List<Map<String, dynamic>>>>(
+        pendingLoginRequestsProvider, (previous, next) {
+      final user = ref.read(currentUserProvider).value;
+      if (user != null && user.role == 'admin') {
+        final currentRequests = next.value ?? [];
+        final previousRequests = previous?.value ?? [];
+
+        final newRequests = currentRequests.where((req) =>
+            req['status'] == 'pending' &&
+            !previousRequests.any((prevReq) =>
+                prevReq['id'] == req['id'] && prevReq['status'] == 'pending'));
+
+        for (final req in newRequests) {
+          _showLoginRequestDialog(req);
+        }
       }
     });
     final isTablet = AppResponsive.isTablet(context);

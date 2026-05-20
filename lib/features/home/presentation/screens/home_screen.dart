@@ -117,23 +117,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final String displayGold = '${goldVal % 1 == 0 ? goldVal.toInt().toString() : goldVal.toStringAsFixed(3).replaceAll(RegExp(r"\.?0+$"), "")} g';
     final String displayDiamond = '${diamondVal % 1 == 0 ? diamondVal.toInt().toString() : diamondVal.toStringAsFixed(2).replaceAll(RegExp(r"\.?0+$"), "")} ct';
 
-    // Today's summary for Mobile
-    double todayInVal = 0.0;
-    double todayOutVal = 0.0;
-    final now = DateTime.now();
-    for (final t in transactions) {
-      if (t.date.year == now.year && t.date.month == now.month && t.date.day == now.day) {
-        if (t.metalType.isEmpty) {
-          if (t.type == TransactionType.receipt) {
-            todayInVal += t.cashAmount;
-          } else if (t.type == TransactionType.payment) {
-            todayOutVal += t.cashAmount;
-          }
-        }
-      }
-    }
-    final String displayTodayIn = '+₹ ${NumberFormat.decimalPattern('en_IN').format(todayInVal)}';
-    final String displayTodayOut = '-₹ ${NumberFormat.decimalPattern('en_IN').format(todayOutVal)}';
 
     if (isTablet) {
       return _buildTabletHomeScreen(
@@ -162,11 +145,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 online: displayOnline,
                 gold: displayGold,
                 diamond: displayDiamond,
-              ),
-              const SizedBox(height: 24),
-              _buildTodaysSummary(
-                todayIn: displayTodayIn,
-                todayOut: displayTodayOut,
               ),
               const SizedBox(height: 24),
               _buildRecentTransactions(),
@@ -739,7 +717,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         _showPrintStatementDialog(
                           context,
                           filtered,
-                          'SwarnKhata Statement',
+                          'Swastik Statement',
                           'Period: $_selectedTableFilter',
                         );
                       },
@@ -1402,168 +1380,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildTodaysSummary({required String todayIn, required String todayOut}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Today's Summary",
-          style: GoogleFonts.montserrat(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.15)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 20,
-                    horizontal: 16,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFDFCF7),
-                    borderRadius: BorderRadius.horizontal(
-                      left: Radius.circular(16),
-                    ),
-                  ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8A7311),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.arrow_downward,
-                                  size: 16,
-                                  color: Color(0xFF757575),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  "IN",
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 13,
-                                    color: const Color(0xFF757575),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              todayIn,
-                              style: GoogleFonts.montserrat(
-                                fontSize: 22,
-                                color: const Color(0xFF8A7311),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 60,
-                color: Colors.grey.withOpacity(0.15),
-              ),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 20,
-                    horizontal: 16,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFF9F9),
-                    borderRadius: BorderRadius.horizontal(
-                      right: Radius.circular(16),
-                    ),
-                  ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFC62828),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.arrow_upward,
-                                  size: 16,
-                                  color: Color(0xFF757575),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  "OUT",
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 13,
-                                    color: const Color(0xFF757575),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              todayOut,
-                              style: GoogleFonts.montserrat(
-                                fontSize: 22,
-                                color: const Color(0xFFC62828),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRecentTransactions() {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
 
@@ -1930,7 +1746,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'PDF saved to Documents/SwarnKhata/Statements',
+                              'PDF saved to Documents/Swastik/Statements',
                               style: GoogleFonts.montserrat(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -2384,6 +2200,15 @@ class _TabletQuickAddEntryDialogState
                     );
                     if (newId != null && newId is String) {
                       setState(() => _pendingPartyId = newId);
+                      final parties = ref.read(partiesStreamProvider).value ?? [];
+                      final found = parties.where((p) => p.id == newId).firstOrNull;
+                      if (found != null) {
+                        setState(() {
+                          _selectedParty = found;
+                          _partyController.text = found.name;
+                          _pendingPartyId = null;
+                        });
+                      }
                     }
                   },
                   borderRadius: BorderRadius.circular(20),

@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/features/auth/providers/auth_providers.dart';
-import 'package:swarn_khata/features/auth/presentation/screens/login_screen.dart';
+import 'package:swarn_khata/features/auth/presentation/screens/otp_screen.dart';
 import 'package:swarn_khata/features/navigation/presentation/screens/main_screen.dart';
 import 'package:swarn_khata/core/models/session_model.dart';
 
@@ -19,7 +20,7 @@ class AuthWrapper extends ConsumerWidget {
         if (user != null) {
           return const SessionWrapper(child: MainScreen());
         }
-        return const LoginScreen();
+        return const OtpScreen();
       },
       loading: () => const Scaffold(
         backgroundColor: Color(0xFFFFF8F0),
@@ -29,7 +30,7 @@ class AuthWrapper extends ConsumerWidget {
           ),
         ),
       ),
-      error: (_, __) => const LoginScreen(),
+      error: (_, __) => const OtpScreen(),
     );
   }
 }
@@ -44,11 +45,32 @@ class SessionWrapper extends ConsumerStatefulWidget {
 
 class _SessionWrapperState extends ConsumerState<SessionWrapper> {
   bool _isChecking = true;
+  Timer? _autoLogoutTimer;
 
   @override
   void initState() {
     super.initState();
     _initializeSession();
+    _startAutoLogoutTimer();
+  }
+
+  void _startAutoLogoutTimer() {
+    _autoLogoutTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+      final user = ref.read(currentUserProvider).value;
+      if (user != null && user.role == 'user') {
+        final nowIST = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+        if (nowIST.hour >= 20) {
+          // It is 8 PM IST or later. Force logout.
+          await ref.read(authNotifierProvider.notifier).signOut();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoLogoutTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _initializeSession() async {
@@ -78,6 +100,21 @@ class _SessionWrapperState extends ConsumerState<SessionWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<SessionModel>>>(activeSessionsProvider, (previous, next) async {
+      final user = ref.read(authStateProvider).value;
+      if (user != null && next.hasValue) {
+        final sessions = next.value ?? [];
+        final localId = await ref.read(sessionServiceProvider).getLocalSessionId();
+        if (localId != null) {
+          final exists = sessions.any((s) => s.id == localId);
+          if (!exists) {
+            await ref.read(sessionServiceProvider).clearLocalSessionId();
+            await ref.read(authNotifierProvider.notifier).signOut();
+          }
+        }
+      }
+    });
+
     if (_isChecking) {
       return const Scaffold(
         backgroundColor: Color(0xFFFFF8F0),
@@ -87,23 +124,6 @@ class _SessionWrapperState extends ConsumerState<SessionWrapper> {
           ),
         ),
       );
-    }
-
-    final user = ref.watch(authStateProvider).value;
-    if (user != null) {
-      ref.listen<AsyncValue<List<SessionModel>>>(activeSessionsProvider, (previous, next) async {
-        if (next.hasValue) {
-          final sessions = next.value ?? [];
-          final localId = await ref.read(sessionServiceProvider).getLocalSessionId();
-          if (localId != null) {
-            final exists = sessions.any((s) => s.id == localId);
-            if (!exists) {
-              await ref.read(sessionServiceProvider).clearLocalSessionId();
-              await ref.read(authNotifierProvider.notifier).signOut();
-            }
-          }
-        }
-      });
     }
 
     return widget.child;

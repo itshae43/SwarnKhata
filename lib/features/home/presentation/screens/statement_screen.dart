@@ -806,7 +806,7 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'PDF saved to Documents/SwarnKhata',
+                              'PDF saved to Documents/Swastik',
                               style: GoogleFonts.montserrat(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -1160,7 +1160,7 @@ class _TransactionStatementScreenState extends ConsumerState<TransactionStatemen
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'PDF saved to Documents/SwarnKhata/Statements',
+                              'PDF saved to Documents/Swastik/Statements',
                               style: GoogleFonts.montserrat(
                                 fontSize: 12,
                                 color: Colors.grey[600],

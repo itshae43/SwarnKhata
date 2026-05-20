@@ -10,6 +10,8 @@ class UserModel {
   final String authProvider; // 'email', 'google', 'phone'
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String role;
+  final bool isLoggedIn;
 
   const UserModel({
     required this.uid,
@@ -21,6 +23,8 @@ class UserModel {
     required this.authProvider,
     required this.createdAt,
     required this.updatedAt,
+    this.role = 'user',
+    this.isLoggedIn = false,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -34,6 +38,8 @@ class UserModel {
       authProvider: map['authProvider'] as String? ?? 'email',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      role: map['role'] as String? ?? 'user',
+      isLoggedIn: map['isLoggedIn'] as bool? ?? false,
     );
   }
 
@@ -48,6 +54,8 @@ class UserModel {
       'authProvider': authProvider,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'role': role,
+      'isLoggedIn': isLoggedIn,
     };
   }
 
@@ -61,6 +69,8 @@ class UserModel {
     String? authProvider,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? role,
+    bool? isLoggedIn,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -72,6 +82,8 @@ class UserModel {
       authProvider: authProvider ?? this.authProvider,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      role: role ?? this.role,
+      isLoggedIn: isLoggedIn ?? this.isLoggedIn,
     );
   }
 }

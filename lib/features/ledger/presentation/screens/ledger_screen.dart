@@ -845,7 +845,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'PDF saved to Documents/SwarnKhata/Ledger',
+                              'PDF saved to Documents/Swastik/Ledger',
                               style: GoogleFonts.montserrat(
                                 fontSize: 12,
                                 color: Colors.grey[600],

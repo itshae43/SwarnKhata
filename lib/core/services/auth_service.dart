@@ -162,6 +162,7 @@ class AuthService {
           phone: '+919671900007',
           photoUrl: '',
           authProvider: 'phone',
+          role: 'admin',
         );
         return credential;
       }
@@ -173,14 +174,30 @@ class AuthService {
     required String phone,
     required String name,
   }) async {
-    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]+'), '');
+    final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
     final email = 'other_phone_${cleanPhone}@swarnkhata.com';
     final password = 'SwarnKhataOther_${cleanPhone}';
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      
+      // Ensure the user document exists in Firestore even if they already exist in Firebase Auth!
+      final doc = await _firestore.collection('users').doc(credential.user!.uid).get();
+      final profileDoc = await _firestore.collection('user_profiles').doc(credential.user!.uid).get();
+      if (!doc.exists || !profileDoc.exists) {
+        await _saveUserToFirestore(
+          uid: credential.user!.uid,
+          fullName: name,
+          businessName: '',
+          email: email,
+          phone: phone,
+          photoUrl: '',
+          authProvider: 'phone',
+        );
+      }
+      return credential;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'wrong-password') {
         // Create the user
@@ -244,6 +261,22 @@ class AuthService {
     if (phone != null) updates['phone'] = phone;
 
     await _firestore.collection('users').doc(uid).update(updates);
+
+    // Sync to user_profiles collection
+    try {
+      final profileDoc = await _firestore.collection('user_profiles').doc(uid).get();
+      if (profileDoc.exists) {
+        await _firestore.collection('user_profiles').doc(uid).update(updates);
+      }
+    } catch (_) {}
+
+    // Sync to admins collection if the user is an admin
+    try {
+      final adminDoc = await _firestore.collection('admins').doc(uid).get();
+      if (adminDoc.exists) {
+        await _firestore.collection('admins').doc(uid).update(updates);
+      }
+    } catch (_) {}
   }
 
   // ─── PRIVATE: SAVE USER TO FIRESTORE ────────────────────────────
@@ -255,6 +288,7 @@ class AuthService {
     required String phone,
     required String photoUrl,
     required String authProvider,
+    String role = 'user',
   }) async {
     final now = DateTime.now();
     final user = UserModel(
@@ -267,7 +301,18 @@ class AuthService {
       authProvider: authProvider,
       createdAt: now,
       updatedAt: now,
+      role: role,
     );
     await _firestore.collection('users').doc(uid).set(user.toMap());
+
+    // Also save in 'user_profiles' collection if it is a standard user profile
+    if (role == 'user') {
+      await _firestore.collection('user_profiles').doc(uid).set(user.toMap());
+    }
+
+    // Also save in 'admins' collection if it is an admin
+    if (role == 'admin') {
+      await _firestore.collection('admins').doc(uid).set(user.toMap());
+    }
   }
 }

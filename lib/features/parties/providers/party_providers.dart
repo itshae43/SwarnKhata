@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/core/models/party_model.dart';
 import 'package:swarn_khata/core/services/party_service.dart';
@@ -57,8 +58,8 @@ class PartyNotifier extends Notifier<PartyState> {
     required double goldBalance,
     required double diamondBalance,
   }) async {
-    final user = ref.read(currentUserProvider).value;
-    if (user == null) {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
       state = state.copyWith(error: 'User not authenticated');
       return null;
     }
@@ -68,7 +69,7 @@ class PartyNotifier extends Notifier<PartyState> {
       final now = DateTime.now();
       final party = PartyModel(
         id: '', // Firestore will generate this
-        userId: user.uid,
+        userId: firebaseUser.uid,
         name: name,
         type: type,
         phone: phone,

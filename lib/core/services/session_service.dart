@@ -72,6 +72,22 @@ class SessionService {
         .doc(userId)
         .collection('sessions');
 
+    // Check if the user is an admin
+    bool isAdmin = false;
+    Map<String, dynamic>? userData;
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        userData = userDoc.data();
+        isAdmin = userData != null && userData['role'] == 'admin';
+      }
+    } catch (_) {}
+
+    final adminDocRef = _firestore
+        .collection('admins')
+        .doc(userId)
+        .collection('sessions');
+
     final info = await getCurrentDeviceInfo();
 
     if (sessionId == null) {
@@ -87,7 +103,32 @@ class SessionService {
         lastActiveAt: DateTime.now(),
       );
 
+      // If the user is an admin, delete all other sessions first to ensure ONLY ONE admin session is active at a time!
+      if (isAdmin) {
+        try {
+          final existingSessions = await docRef.get();
+          for (final doc in existingSessions.docs) {
+            await doc.reference.delete();
+          }
+          final existingAdminSessions = await adminDocRef.get();
+          for (final doc in existingAdminSessions.docs) {
+            await doc.reference.delete();
+          }
+        } catch (_) {}
+      }
+
       await docRef.doc(sessionId).set(session.toMap());
+      
+      if (isAdmin && userData != null) {
+        try {
+          // Ensure the parent admin document exists to avoid ghost/italicized documents
+          final adminDoc = await _firestore.collection('admins').doc(userId).get();
+          if (!adminDoc.exists) {
+            await _firestore.collection('admins').doc(userId).set(userData);
+          }
+          await adminDocRef.doc(sessionId).set(session.toMap());
+        } catch (_) {}
+      }
       return true;
     } else {
       final doc = await docRef.doc(sessionId).get();
@@ -98,6 +139,19 @@ class SessionService {
         await docRef.doc(sessionId).update({
           'lastActiveAt': FieldValue.serverTimestamp(),
         });
+        
+        if (isAdmin && userData != null) {
+          try {
+            // Ensure the parent admin document exists to avoid ghost/italicized documents
+            final adminDoc = await _firestore.collection('admins').doc(userId).get();
+            if (!adminDoc.exists) {
+              await _firestore.collection('admins').doc(userId).set(userData);
+            }
+            await adminDocRef.doc(sessionId).update({
+              'lastActiveAt': FieldValue.serverTimestamp(),
+            });
+          } catch (_) {}
+        }
         return true;
       }
     }
@@ -124,5 +178,14 @@ class SessionService {
         .collection('sessions')
         .doc(sessionId)
         .delete();
+        
+    try {
+      await _firestore
+          .collection('admins')
+          .doc(userId)
+          .collection('sessions')
+          .doc(sessionId)
+          .delete();
+    } catch (_) {}
   }
 }

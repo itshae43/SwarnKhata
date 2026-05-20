@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swarn_khata/core/models/user_model.dart';
@@ -14,6 +15,29 @@ final sessionServiceProvider = Provider<SessionService>((ref) => SessionService(
 // ─── FIREBASE AUTH USER STREAM ──────────────────────────────────────
 final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(authServiceProvider).authStateChanges;
+});
+
+// ─── DEDICATED USER PROFILES COLLECTION STREAM ─────────────────────────
+final userProfilesProvider = StreamProvider<List<UserModel>>((ref) {
+  final firestore = FirebaseFirestore.instance;
+  return firestore
+      .collection('user_profiles')
+      .snapshots()
+      .map((snapshot) => snapshot.docs
+          .map((doc) => UserModel.fromMap(doc.data()))
+          .where((user) => user.role != 'admin')
+          .toList());
+});
+
+// ─── PENDING LOGIN REQUESTS (ADMIN) ───────────────────────────────
+final pendingLoginRequestsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+  final firestore = FirebaseFirestore.instance;
+  return firestore
+      .collection('login_requests')
+      .orderBy('timestamp', descending: true)
+      .snapshots()
+      .map((snapshot) =>
+          snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
 });
 
 // ─── CURRENT USER FIRESTORE DATA ────────────────────────────────────
@@ -166,6 +190,12 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  Future<void> updateLoginStatus(String uid, bool isLoggedIn) async {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'isLoggedIn': isLoggedIn,
+    });
+  }
+
   Future<void> signOut() async {
     try {
       final user = _authService.currentUser;
@@ -186,6 +216,13 @@ class AuthNotifier extends Notifier<AuthState> {
       await ref.read(sessionServiceProvider).clearLocalSessionId();
     } catch (_) {}
     
+    try {
+      final user = _authService.currentUser;
+      if (user != null) {
+        await updateLoginStatus(user.uid, false);
+      }
+    } catch (_) {}
+
     await _authService.signOut();
     state = const AuthState();
   }
@@ -243,27 +280,116 @@ class OtpNotifier extends Notifier<OtpState> {
 
   AuthService get _authService => ref.read(authServiceProvider);
 
+  Future<void> sendLoginRequest(UserModel user) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final firestore = FirebaseFirestore.instance;
+      await firestore.collection('login_requests').add({
+        'uid': user.uid,
+        'name': user.fullName,
+        'phone': user.phone,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending', // pending, approved, declined
+      });
+      state = state.copyWith(
+        isLoading: false,
+        verificationId: 'mock_other_verification_id', // Set this so verifyOtp succeeds!
+        error: 'Login request sent to Admin. Waiting for approval...',
+      ); // Using error state just to show message in UI for now
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: 'Failed to send request');
+    }
+  }
+
+  Future<UserModel?> createNewUser(String name, String phone) async {
+    final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+    if (cleanPhone == '9671900007' || cleanPhone == '919671900007') {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Cannot create a user profile with the Admin\'s phone number.',
+      );
+      return null;
+    }
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final credential = await _authService.signInMockOther(phone: phone, name: name);
+      final user = await _authService.getUserData(credential.user!.uid);
+      // Immediately log them out after creation so they go to pending list
+      await _authService.signOut();
+      state = state.copyWith(isLoading: false);
+      return user;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: 'Failed to create user');
+      return null;
+    }
+  }
+
+  Future<bool> verifyAdmin({required String pin}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    // ── 1. Validate PIN ───────────────────────────────────────────────
+    const adminPin = '112211';
+    if (pin != adminPin) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Incorrect PIN. Please try again.',
+      );
+      return false;
+    }
+
+    try {
+      // ── 2. Check single-admin rule ────────────────────────────────
+      final firestore = FirebaseFirestore.instance;
+      final adminsSnap = await firestore.collection('admins').limit(1).get();
+
+      if (adminsSnap.docs.isNotEmpty) {
+        // There is already an admin document. Verify it belongs to the
+        // same Firebase account we are about to sign into.
+        final existingAdminUid = adminsSnap.docs.first.id;
+
+        // Try signing in; if it succeeds the UIDs must match.
+        final credential = await _authService.signInMockAdmin();
+        if (credential.user?.uid != existingAdminUid) {
+          // Different admin already exists — block login.
+          await _authService.signOut();
+          state = state.copyWith(
+            isLoading: false,
+            error: 'Another admin already exists. Delete the existing admin first.',
+          );
+          return false;
+        }
+        state = state.copyWith(isLoading: false);
+        return true;
+      }
+
+      // ── 3. No admin yet — create & sign in ────────────────────────
+      await Future.delayed(const Duration(milliseconds: 800));
+      await _authService.signInMockAdmin();
+      state = state.copyWith(isLoading: false);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message ?? 'Authentication failed.',
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
+
   Future<void> sendOtp(String phoneNumber, {required String role}) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
-    // Normalize phone number (remove spaces, dashes, etc.)
-    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[\s\-()]+'), '');
-    if (role == 'admin') {
-      if (cleanPhone != '+919671900007' && cleanPhone != '9671900007') {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'use admin number for login',
-        );
-        return;
-      }
-    }
-
-    // For both, mock the OTP send flow to bypass Firebase phone auth billing check
+    // Admin now uses PIN — OTP path is only for 'other' users.
+    // Mock the OTP send flow to bypass Firebase phone auth billing.
     await Future.delayed(const Duration(milliseconds: 800));
     state = state.copyWith(
       isLoading: false,
       isCodeSent: true,
-      verificationId: role == 'admin' ? 'mock_admin_verification_id' : 'mock_other_verification_id',
+      verificationId: 'mock_other_verification_id',
     );
   }
 
@@ -272,29 +398,19 @@ class OtpNotifier extends Notifier<OtpState> {
     required String phone,
     String? name,
   }) async {
-    if (state.verificationId == null) {
+    final effectiveVerificationId = role == 'other' 
+        ? (state.verificationId ?? 'mock_other_verification_id')
+        : state.verificationId;
+
+    if (effectiveVerificationId == null) {
       state = state.copyWith(
           error: 'Verification ID missing. Please resend OTP.');
       return false;
     }
     state = state.copyWith(isLoading: true, clearError: true);
 
-    if (state.verificationId == 'mock_admin_verification_id') {
-      try {
-        await _authService.signInMockAdmin();
-        state = state.copyWith(isLoading: false);
-        return true;
-      } on FirebaseAuthException catch (e) {
-        state = state.copyWith(
-          isLoading: false,
-          error: e.message ?? 'Authentication failed.',
-        );
-        return false;
-      } catch (e) {
-        state = state.copyWith(isLoading: false, error: e.toString());
-        return false;
-      }
-    } else if (state.verificationId == 'mock_other_verification_id') {
+    // Only 'other' users flow through verifyOtp. Admin uses verifyAdmin(pin).
+    if (effectiveVerificationId == 'mock_other_verification_id') {
       try {
         await _authService.signInMockOther(
           phone: phone,
@@ -313,6 +429,7 @@ class OtpNotifier extends Notifier<OtpState> {
         return false;
       }
     }
+
 
     try {
       await _authService.signInWithOTP(

@@ -144,7 +144,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to your SwarnKhata account',
+                          'Sign in to your Swastik account',
                           style: GoogleFonts.montserrat(
                             fontSize: 14,
                             color: Colors.grey[600],
